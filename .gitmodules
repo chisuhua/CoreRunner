@@ -1,0 +1,6 @@
+[submodule "QuarkTS"]
+	path = QuarkTS
+	url = git@github.com:chisuhua/QuarkTS.git
+[submodule "gem5"]
+	path = gem5
+	url = git@github.com:chisuhua/gem5.git
