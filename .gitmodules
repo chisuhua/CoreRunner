@@ -4,3 +4,6 @@
 [submodule "gem5"]
 	path = gem5
 	url = git@github.com:chisuhua/gem5.git
+[submodule "riscv-gnu-toolchain"]
+	path = riscv-gnu-toolchain
+	url = https://github.com/riscv/riscv-gnu-toolchain
