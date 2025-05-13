@@ -7,3 +7,6 @@
 [submodule "riscv-gnu-toolchain"]
 	path = riscv-gnu-toolchain
 	url = https://github.com/riscv/riscv-gnu-toolchain
+[submodule "SystemRunner"]
+	path = SystemRunner
+	url = git@github.com:chisuhua/SystemRunner.git
