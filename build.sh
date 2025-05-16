@@ -4,9 +4,9 @@ BUILD_DIR=$SCRIPT_DIR/build
 THREADS=$(nproc)
 
 BUILD_OPT=(dbg rel dbgrel)
-RUN=(build clean run gdb)
+RUN=(build clean run gdb dump)
 OPT=(n)
-TGT=(all riscv gem5 glib riscv_make riscv_qemu mytest)
+TGT=(all riscv libgem5 gem5 glib riscv_make riscv_qemu mytest)
 
 [ -z "${BUILD_TYPE}" ] && BUILD_TYPE=Debug
 
@@ -110,9 +110,16 @@ function clean_riscv {
 GEM5_SRC=gem5
 GEM5_BUILD=${SCRIPT_DIR}/${GEM5_SRC}/build
 GEM5_TARGET=RISCV/gem5.debug
+GEM5_LIB_TARGET=RISCV/libgem5_debug.so
 function build_gem5 {
    run_cmd "cd $SCRIPT_DIR/$GEM5_SRC"
    run_cmd "scons -j${THREADS} --verbose ${GEM5_BUILD}/${GEM5_TARGET}"
+}
+
+function build_libgem5 {
+   run_cmd "cd $SCRIPT_DIR/$GEM5_SRC"
+   run_cmd "scons setconfig build/RISCV USE_SYSTEMC=n"
+   run_cmd "scons -j${THREADS} --with-cxx-config --without-python --without-tcmalloc --duplicate-sources USE_SYSTEMC=0 ${GEM5_BUILD}/${GEM5_LIB_TARGET}"
 }
 
 function clean_gem5 {

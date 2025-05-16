@@ -102,11 +102,11 @@ qClock_t GetTickCountMs(void){ /*get system background timer (1mS tick)*/
 }
 
 /*=============================================================================*/
-void start() {  
+void main() {  
     qSM_TimeoutSpec_t tm_spectimeout;
 
-    //printf("OvenControl = %d\r\n", getpid() );
-    qOS_Setup(GetTickCountMs, 0.001f, NULL ); 
+    printf("OvenControl = %d\r\n", getpid() );
+    qOS_Setup(GetTickCountMs, 100, NULL ); 
 
     qStateMachine_Setup( &LED_FSM, NULL, &State_LEDOff, NULL, NULL ); 
     qStateMachine_StateSubscribe( &LED_FSM, &State_LEDOff, NULL, State_LEDOff_Callback, NULL, qFalse ); 
