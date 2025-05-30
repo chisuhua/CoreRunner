@@ -4,7 +4,7 @@ BUILD_DIR=$SCRIPT_DIR/build
 THREADS=$(nproc)
 
 BUILD_OPT=(dbg rel dbgrel)
-RUN=(build clean run gdb dump)
+RUN=(build clean sim emu gdb dump)
 OPT=(n)
 TGT=(all riscv libgem5 gem5 glib riscv_make riscv_qemu mytest)
 
@@ -90,7 +90,7 @@ RISCV_ABI=--with-abi=ilp32
 
 function build_riscv {
    run_cmd "cd $SCRIPT_DIR/$RISCV_SRC"
-   run_cmd "./configure --enable-qemu-system  --prefix=$RISCV_BUILD $RISCV_ARCH $RISCV_ABI --with-multilib-generator=\"rv32gc-ilp32--\""
+   run_cmd "./configure --enable-qemu-system  --prefix=$RISCV_BUILD $RISCV_ARCH $RISCV_ABI --with-multilib-generator=\"rv32gc_zicsr-ilp32--\""
 }
 function build_riscv_make {
    run_cmd "cd $SCRIPT_DIR/$RISCV_SRC"
@@ -141,9 +141,14 @@ function clean_mytest {
 }
 
 
-function run_mytest {
+function sim_mytest {
    run_cmd "cd $SCRIPT_DIR/${MYTEST_SRC}"
-   run_cmd "make run"
+   run_cmd "make qemu"
+}
+
+function emu_mytest {
+   run_cmd "cd $SCRIPT_DIR/${MYTEST_SRC}"
+   run_cmd "make gem5"
 }
 
 
@@ -160,6 +165,7 @@ function build {
    build_riscv_qemu $@
    build_gem5 $@
    build_mytest $@
+   #build_cudafe $@
 }
 
 function clean {

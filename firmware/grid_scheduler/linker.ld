@@ -1,7 +1,7 @@
 MEMORY
 {
-    RAM (rwx) : ORIGIN = 0x80000000, LENGTH = 0x40000 /* 可读写可执行的RAM区域 */
-    /*RAM (rwx) : ORIGIN = 0x80200000, LENGTH = 0x400000  /* 可读写可执行的RAM区域 */
+    RAM (rwx) : ORIGIN = 0x00002000, LENGTH = 0x40000 /* 可读写可执行的RAM区域 */
+    /*RAM2 (rwx) : ORIGIN = 0x80100000, LENGTH = 0x100000  /* 可读写可执行的RAM区域 */
 }
 
 ENTRY(_start)

@@ -1,130 +1,174 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/time.h>
-#include <math.h>
 #include "QuarkTS.h"
+#include "unity.h"
+#include <stdio.h>
 
+#define UART_BASE 0x10000000
 
-#define SIGNAL_BUTTON_PRESSED   ( (qSM_SigId_t)1 )
-#define SIGNAL_TIMEOUT          (QSM_SIGNAL_TIMEOUT(0))
-#define SIGNAL_BLINK            (QSM_SIGNAL_TIMEOUT(1))
+// 定义寄存器偏移量
+#define UART_RBR (UART_BASE + 0x00) // 接收缓冲寄存器
+#define UART_THR (UART_BASE + 0x00) // 发送保持寄存器
+#define UART_IER (UART_BASE + 0x01) // 中断使能寄存器
+#define UART_FCR (UART_BASE + 0x02) // FIFO 控制寄存器
+#define UART_LCR (UART_BASE + 0x03) // 线路控制寄存器
+#define UART_MCR (UART_BASE + 0x04) // MODEM 控制寄存器
+#define UART_LSR (UART_BASE + 0x05) // 线路状态寄存器
 
-qTask_t LED_Task; /*The task node*/
-qSM_t LED_FSM; /*The state-machine handler*/
-qSM_State_t State_LEDOff, State_LEDOn, State_LEDBlink;
-qQueue_t LEDsigqueue; /*the signal-queue*/ 
-qSM_Signal_t led_sig_stack[5];  /*the signal-queue storage area*/
+// UART 寄存器偏移
+#define UART_LSR_THRE (1 << 5)        // Transmitter Holding Register Empty
+//
+// 内联汇编函数用于读写内存映射 I/O
+static inline uint8_t mmio_read(uintptr_t addr) {
+    uint8_t value;
+    __asm__ volatile ("lw %0, (%1)" : "=r"(value) : "r"(addr));
+    return value;
+}
 
+static inline void mmio_write(uintptr_t addr, uint8_t value) {
+    __asm__ volatile ("sw %0, (%1)" :: "r"(value), "r"(addr));
+}
 
-qSM_Status_t DoorClosed_State( qSM_Handler_t h );
-qSM_Status_t DoorOpen_State( qSM_Handler_t h );
+// 读写 8-bit 寄存器
+static inline uint8_t mmio_read8(uintptr_t addr) {
+    return *(volatile uint8_t*)addr;
+}
 
-qSM_Status_t Heating_State( qSM_Handler_t h );
-qSM_Status_t Off_State( qSM_Handler_t h );
+static inline void mmio_write8(uintptr_t addr, uint8_t val) {
+    *(volatile uint8_t*)addr = val;
+}
 
-qSM_Status_t Toasting_State( qSM_Handler_t h );
-qSM_Status_t Baking_State( qSM_Handler_t h );
+// 读写 32-bit 寄存器
+static inline uint32_t mmio_read32(uintptr_t addr) {
+    return *(volatile uint32_t*)addr;
+}
 
-qSM_Transition_t LEDOff_transitions[] = {
-    { SIGNAL_BUTTON_PRESSED, NULL, &State_LEDOn    ,0, NULL }
-};
+static inline void mmio_write32(uintptr_t addr, uint32_t val) {
+    *(volatile uint32_t*)addr = val;
+}
+void uart_init() {
+    // 禁用中断
+    mmio_write(UART_IER, 0x00);
+    
+    // 设置波特率除数寄存器（DLAB=1）
+    mmio_write(UART_LCR, 0x80); // DLAB bit = 1
+    
+    // 设置波特率，假设时钟频率为 18.432 MHz
+    mmio_write(UART_RBR, 12); // Low byte of divisor (for 9600 baud)
+    mmio_write(UART_IER, 0);  // High byte of divisor
+    
+    // 设置数据格式：8N1
+    mmio_write(UART_LCR, 0x03); // Clear DLAB, set word length to 8 bits
+}
 
-qSM_Transition_t LEDOn_transitions[] = {
-    { SIGNAL_TIMEOUT,        NULL, &State_LEDOff   ,0, NULL },
-    { SIGNAL_BUTTON_PRESSED, NULL, &State_LEDBlink ,0, NULL }
-};
-
-qSM_Transition_t LEDBlink_transitions[] = {
-    { SIGNAL_TIMEOUT,        NULL, &State_LEDOff   ,0, NULL },
-    { SIGNAL_BUTTON_PRESSED, NULL, &State_LEDOff   ,0, NULL }
-};
-
-qSM_TimeoutStateDefinition_t LedOn_Timeouts[]={
-    { 10.0f,  QSM_TSOPT_INDEX(0) | QSM_TSOPT_SET_ENTRY | QSM_TSOPT_RST_EXIT  },
-};
-
-qSM_TimeoutStateDefinition_t LEDBlink_timeouts[]={
-    { 10.0f,  QSM_TSOPT_INDEX(0) | QSM_TSOPT_SET_ENTRY | QSM_TSOPT_RST_EXIT  },
-    { 0.5f,   QSM_TSOPT_INDEX(1) | QSM_TSOPT_SET_ENTRY | QSM_TSOPT_RST_EXIT | QSM_TSOPT_PERIODIC  },
-};
-/*---------------------------------------------------------------------*/
-qSM_Status_t State_LEDOff_Callback( qSM_Handler_t h ){
-    switch( h->Signal ){
-        case QSM_SIGNAL_ENTRY:
-            puts("->ledoff");
-            //BSP_LED_OFF();
-            break;
-        case QSM_SIGNAL_EXIT:
-            puts("x-ledoff");
-            break;   
-        default:
-            break;
+void uart_putc(char c) {
+    // 等待直到 THR 可以接收新的字符
+    while ((mmio_read8(UART_LSR) & UART_LSR_THRE) == 0); // 检查 THRE (Transmitter Holding Register Empty) flag
+    // 发送字符
+    mmio_write8(UART_THR, c);
+}
+void uart_puts(const char* str) {
+    while (*str) {
+        uart_putc(*str++);
     }
-    return qSM_STATUS_EXIT_SUCCESS;
-}
-/*---------------------------------------------------------------------*/
-qSM_Status_t State_LEDOn_Callback( qSM_Handler_t h ){
-    switch( h->Signal ){
-        case QSM_SIGNAL_ENTRY:
-            puts("->ledon");
-            //BSP_LED_ON();
-            break;
-        case QSM_SIGNAL_EXIT:
-            puts("x-ledon");
-            break;
-        default:
-            break;
-    }
-    return qSM_STATUS_EXIT_SUCCESS;
-}
-/*---------------------------------------------------------------------*/
-qSM_Status_t State_LEDBlink_Callback( qSM_Handler_t h ){
-    switch( h->Signal ){
-        case QSM_SIGNAL_ENTRY:
-            puts("->ledblink");
-            break;
-        case QSM_SIGNAL_EXIT:
-            puts("x-ledblink");
-            break; 
-        case SIGNAL_BLINK:
-            puts("LED TOGGLE");
-            break;
-    }
-    return qSM_STATUS_EXIT_SUCCESS;
-}
-/*===========================Reference clock for the kernel===================*/
-qClock_t GetTickCountMs(void){ /*get system background timer (1mS tick)*/
-    struct timespec ts;
-    //clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (qClock_t)(ts.tv_nsec / (qClock_t)1000000uL) + ((qClock_t)ts.tv_sec * (qClock_t)1000uL);
 }
 
-/*=============================================================================*/
-void main() {  
-    qSM_TimeoutSpec_t tm_spectimeout;
+#ifdef BAREMETAL
+void putUART1(void *sp, const char c) {
+    uart_putc(c);
+}
+#else
+void putUART1(void *sp, const char c) {
+    putchar(c);
+}
+#endif
 
-    printf("OvenControl = %d\r\n", getpid() );
-    qOS_Setup(GetTickCountMs, 100, NULL ); 
+static uint32_t instreth;
+static uint32_t cycleh;
 
-    qStateMachine_Setup( &LED_FSM, NULL, &State_LEDOff, NULL, NULL ); 
-    qStateMachine_StateSubscribe( &LED_FSM, &State_LEDOff, NULL, State_LEDOff_Callback, NULL, qFalse ); 
-    qStateMachine_StateSubscribe( &LED_FSM, &State_LEDOn, NULL, State_LEDOn_Callback, NULL, qFalse );
-    qStateMachine_StateSubscribe( &LED_FSM, &State_LEDBlink, NULL, State_LEDBlink_Callback, NULL, qFalse ); 
+//typedef uint64_t count_t;
+typedef uint32_t count_t;
 
-    qQueue_Setup( &LEDsigqueue, led_sig_stack, sizeof(qSM_Signal_t), qFLM_ArraySize(led_sig_stack) );
-    qStateMachine_InstallSignalQueue( &LED_FSM, &LEDsigqueue );
-/*
+static inline count_t read_cycle_start(void) {
+    uint32_t lo, hi;
+    asm volatile ("csrr %0, cycle" : "=r"(lo));  // 读取低32位
+    asm volatile ("csrr %0, cycleh" : "=r"(hi));  // 读取高32位
+    cycleh = hi;
+    return lo;
+}
 
-    qStateMachine_InstallTimeoutSpec( &LED_FSM, &tm_spectimeout );
-    qStateMachine_Set_StateTimeouts( &State_LEDOn, LedOn_Timeouts, qFLM_ArraySize(LedOn_Timeouts) );
-    qStateMachine_Set_StateTimeouts( &State_LEDBlink, LEDBlink_timeouts, qFLM_ArraySize(LEDBlink_timeouts) );
+static inline count_t read_cycle_end(void) {
+    uint32_t lo, hi;
+    asm volatile ("csrr %0, cycle" : "=r"(lo));  // 读取低32位
+    asm volatile ("csrr %0, cycleh" : "=r"(hi));  // 读取高32位
+    TEST_ASSERT_TRUE(cycleh == hi);
+    return lo;
+}
 
-    qStateMachine_Set_StateTransitions( &State_LEDOff, LEDOff_transitions, qFLM_ArraySize(LEDOff_transitions) );
-    qStateMachine_Set_StateTransitions( &State_LEDOn, LEDOn_transitions, qFLM_ArraySize(LEDOn_transitions) );
-    qStateMachine_Set_StateTransitions( &State_LEDBlink, LEDBlink_transitions, qFLM_ArraySize(LEDBlink_transitions) );
-  */
-    qOS_Add_StateMachineTask(  &LED_Task, &LED_FSM, qMedium_Priority, 0.1f, qEnabled, NULL  );     
-    qOS_Run();
+static inline count_t read_instret_start(void) {
+    uint32_t lo, hi;
+    asm volatile ("csrr %0, instret" : "=r"(lo));  // 读取低32位
+    asm volatile ("csrr %0, instreth" : "=r"(hi));  // 读取高32位
+    instreth = hi;
+    return lo;
+}
+
+static inline count_t read_instret_end(void) {
+    uint32_t lo, hi;
+    asm volatile ("csrr %0, instret" : "=r"(lo));  // 读取低32位
+    asm volatile ("csrr %0, instreth" : "=r"(hi));  // 读取高32位
+    TEST_ASSERT_TRUE(instreth == hi);
+    return lo;
+}
+
+extern void loop10inst(int loop_count);
+extern void loop100inst(int loop_count);
+
+void verify_loop_inst(int loop_count, int largebase) {
+  qTrace_Message("=========================");
+  count_t start_instret;
+  count_t end_instret;
+  if (largebase == 100) {
+    // start_instret = read_instret_start();
+    start_instret = read_cycle_start();
+    loop100inst(loop_count);
+    end_instret = read_cycle_end();
+    qTrace_UnsignedDecimal(loop_count);
+    qTrace_UnsignedDecimal(loop_count*100);
+  } else {
+    //start_instret = read_instret_start();
+    start_instret = read_cycle_start();
+    loop10inst(loop_count);
+    end_instret = read_cycle_end();
+    qTrace_UnsignedDecimal(loop_count);
+    qTrace_UnsignedDecimal(loop_count*10);
+  }
+
+  qTrace_UnsignedHexadecimal(start_instret);
+  qTrace_UnsignedHexadecimal(end_instret);
+  qTrace_UnsignedHexadecimal(end_instret - start_instret);
+  qTrace_UnsignedDecimal(end_instret - start_instret);
+}
+
+void main() {
+  // uart_init();
+  // uart_puts("Hello world\n");
+
+  qTrace_Set_OutputFcn(putUART1);
+
+  verify_loop_inst(1, 10);
+  verify_loop_inst(10, 10);
+  verify_loop_inst(100, 10);
+  verify_loop_inst(1000, 10);
+
+  verify_loop_inst(1, 100);
+  verify_loop_inst(10, 100);
+  verify_loop_inst(100, 100);
+  verify_loop_inst(1000, 100);
+
+  static qUINT32_t Counter = 0;
+  while(1) {
+    Counter++;
+    qTrace_Message("hello again\n");
+    qTrace_Variable(Counter, UnsignedDecimal);
+    if (Counter > 2) exit(0);
+  }
 }
