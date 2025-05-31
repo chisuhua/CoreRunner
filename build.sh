@@ -113,7 +113,8 @@ GEM5_TARGET=RISCV/gem5.debug
 GEM5_LIB_TARGET=RISCV/libgem5_debug.so
 function build_gem5 {
    run_cmd "cd $SCRIPT_DIR/$GEM5_SRC"
-   run_cmd "scons -j${THREADS} --verbose ${GEM5_BUILD}/${GEM5_TARGET}"
+   #run_cmd "scons -j${THREADS} --verbose ${GEM5_BUILD}/${GEM5_TARGET}"
+   run_cmd "scons -j${THREADS} --verbose ${GEM5_BUILD}/${GEM5_TARGET} EXTRAS=${SCRIPT_DIR}/gem5_ext/src/scnode_within_gem5"
 }
 
 function build_libgem5 {

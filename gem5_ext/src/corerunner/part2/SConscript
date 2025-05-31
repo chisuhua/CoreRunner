@@ -1,0 +1,5 @@
+Import('*')
+
+DebugFlag('Component')
+SimObject('HelloComponent.py', sim_objects=['HelloComponent'])
+Source('hello_component.cc')
