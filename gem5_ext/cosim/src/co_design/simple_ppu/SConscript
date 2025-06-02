@@ -1,0 +1,71 @@
+import os
+import pdb
+
+Import('env')
+Import('deps')
+Import('linklibs')
+Import('compile_design')
+Import('compile_scala')
+
+env = env.Clone()
+gem5_root = env['GEM5_ROOT']
+co_build_dir = env['CO_BUILD_DIR']
+cosim_dir = env['COSIM_DIR']
+verilog_design_dir = env['VERILOG_DESIGN_DIR']
+chisel_design_dir = env['CHISEL_DESIGN_DIR']
+
+src = [File('main.cc')]
+src_sc = [File('sc_target.cc'), File('sc_initiator.cc'), File('top.cc')]
+
+####################################
+# axi_bridge
+vfiles = [File(os.path.join(verilog_design_dir, 'axi_bridge', 'axi_join.v'))]
+
+verilated_o, verilated_obj, verilated_header = compile_design(env, vfiles, "axi_join", "axi_join")
+
+verilated_dir = os.path.dirname(verilated_header)
+
+####################################
+# GDC
+# modify from compiler_verilog(env)
+# GCD_v, GCD_macros_v, GCD_const_h, GCD_const_vh, GCD_defines = compile_scala(env, 'dessert.examples', 'GCD')
+
+#fpga_o, fpga_obj, fpga_header = compile_design(env, [GCD_v], "GCD", "GCD")
+
+####################################
+# GDC
+# modify from compiler_verilog(env)
+#mini_v, mini_macros_v, mini_const_h, mini_const_vh, mini_defines = compile_scala(env, 'mini', 'Tile')
+
+#fpga_o, fpga_obj, fpga_header = compile_design(env, [mini_v], "mini", "mini")
+
+
+
+env.Append(CPPPATH=[verilated_dir])
+env.Append(CPPPATH=env['VERILATOR_ROOT'] + '/include')
+
+obj_sc = env.Object(src_sc)
+
+env.Depends(obj_sc, verilated_header)
+
+vdeps = []
+vdeps.append(File(verilated_o))
+vdeps.append(File(verilated_obj))
+
+
+#bin = env.Program('gem5.sc', src + src_sc + deps + vdeps)
+env['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME']=1
+
+libdir = os.path.abspath(env['COSIM_DIR'])
+liblist = []
+for lib in linklibs:
+    lib_copy = os.path.join(libdir, os.path.basename(lib))
+    Command(lib_copy, lib, Copy("$TARGET", "$SOURCE"))
+    liblist.append(lib_copy)
+
+lib = env.SharedLibrary('gem5_sc.so', src + src_sc + vdeps + deps, RPATH=libdir,
+           LIBPATH=libdir, LIBS=[os.path.basename(lib) for lib in liblist])
+libout = os.path.join(libdir, 'libgem5_sc.so')
+Command(libout, lib, Copy("$TARGET", "$SOURCE"))
+
+Return('libout')

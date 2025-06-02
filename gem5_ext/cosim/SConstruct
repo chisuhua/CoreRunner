@@ -1,0 +1,245 @@
+#!python
+#
+# Authors: Chi Suhua
+
+import os
+import sys
+import glob
+import pdb
+import SCons
+import SCons.Node
+import SCons.Node.FS
+import SCons.Tool
+
+env = Environment()
+
+env.Tool(SCons.Tool.FindTool(['gcc', 'clang'], env))
+env.Tool(SCons.Tool.FindTool(['g++', 'clang++'], env))
+
+# As gcc and clang share many flags, do the common parts here
+env.Append(CCFLAGS=['-pipe'])
+env.Append(CCFLAGS=['-fno-strict-aliasing'])
+
+# Enable -Wall and -Wextra and then disable the few warnings that
+# we consistently violate
+env.Append(CCFLAGS=['-Wall', '-Wundef', '-Wextra',
+                         '-Wno-sign-compare', '-Wno-unused-parameter'])
+
+# We always compile using C++17
+env.Append(CXXFLAGS=['-std=c++17'])
+
+#gem5_variant = 'opt'
+#gem5_variant = 'debug'
+gem5_variant = os.environ.get('GEM5_VARIANT')
+
+gem5_root = Dir('#../..').srcnode().abspath
+gem5_tlm = gem5_root + '/util/tlm'
+design_root = os.environ.get('DESIGN_ROOT')
+
+#Make the gem5 root available in SConscripts
+env['GEM5_ROOT'] = gem5_root
+
+co_build_dir = os.environ.get('CO_BUILD_DIR')
+if not co_build_dir:
+    co_build_dir = 'build'
+
+env['CO_BUILD_DIR'] = co_build_dir
+
+#    print("Please setup setup env GEM5_ARCH")
+#    exit(1)
+
+gem5_arch = os.environ.get('GEM5_ARCH')
+if not gem5_arch:
+    print("GEM5_ARCH is {}".format(gem5_arch))
+    exit(1)
+env['GEM5_ARCH'] = gem5_arch
+
+shlibsuffix = env['SHLIBSUFFIX']
+
+# add include dirs
+env.Append(CPPPATH=[gem5_root + '/build/' + gem5_arch,
+                    gem5_root + '/util/systemc/gem5_within_systemc',
+                    gem5_root + '/ext/systemc/src',
+                    gem5_root + '/ext/libsystemctlm-soc',
+                    gem5_root + '/ext/axi',
+                    gem5_root + '/util/libiniloader',
+                    gem5_tlm + '/src',
+                    gem5_tlm + '/examples/common',
+                    ])
+
+env.Append(CXXFLAGS=['-std=c++14',
+                     '-DSC_INCLUDE_DYNAMIC_PROCESSES',
+                     '-DTRACING_ON',
+                     ])
+
+env.Append(CXXFLAGS=['-g', '-DDEBUG'])
+if gem5_variant == 'opt':
+    env.Append(CXXFLAGS=['-O3'])
+
+deps = [] # keep track of all dependencies required for building the binaries
+
+deps += SConscript(gem5_tlm + '/examples/common/SConscript',
+                   variant_dir= co_build_dir + '/examples/common',
+                   exports=['env'])
+
+deps += SConscript(gem5_root + '/util/libiniloader/SConscript',
+                   variant_dir= co_build_dir + '/libiniloader',
+                   exports=['env'])
+
+linklibs = []
+tlm = SConscript(gem5_tlm + '/src/SConscript', variant_dir= co_build_dir + '/tlm', exports='env')
+linklibs.append(os.path.join(Dir('#.').srcnode().abspath, co_build_dir, 'tlm', tlm[0].name))
+
+# the SystemC SConscript makes certain assumptions, we need to fulfill these
+# assumptions before calling the SConscript.
+main = env
+sys.path.append(gem5_root + '/src/python')
+AddOption('--no-colors', dest='use_colors', action='store_false',
+          help="Don't add color to abbreviated scons output")
+
+sysc = SConscript(gem5_root + '/ext/systemc/SConscript',
+           variant_dir= co_build_dir + '/systemc',
+           exports='main')
+linklibs.append(os.path.join(Dir('#.').srcnode().abspath, co_build_dir, 'systemc', sysc[0].name))
+linklibs.append(os.path.join(gem5_root, 'build', gem5_arch, 'libgem5_' + gem5_variant + shlibsuffix))
+
+ex_master = SConscript('examples/master_port/SConscript',
+                       variant_dir= co_build_dir + '/examples/master_port',
+                       exports=['env', 'deps'])
+
+ex_slave = SConscript('examples/slave_port/SConscript',
+                      variant_dir= co_build_dir + '/examples/slave_port',
+                      exports=['env', 'deps'])
+
+
+env['SYSTEMC_INCLUDE'] = gem5_root + '/ext/systemc/src'
+env['SYSTEMC_LIBDIR'] = gem5_tlm + '/build/systemc'
+env['COSIM_DIR'] = design_root + '/cosim'
+
+cosim_dir = env['COSIM_DIR']
+env['VERILOG_DESIGN_DIR'] = cosim_dir + '/src/verilog_design'
+env['CHISEL_DESIGN_DIR'] = cosim_dir + '/src/chisel_design'
+
+
+
+
+
+num_cpus = 0
+with open('/proc/cpuinfo', 'r') as _f:
+    for line in _f:
+        if line[:9] == 'processor':
+            num_cpus += 1
+print("# of processors: %d" % num_cpus)
+
+if GetOption('num_jobs') < 8:
+    SetOption('num_jobs', max(num_cpus-4, 8))
+print("# of job: %d" % GetOption('num_jobs'))
+
+
+#verilog, const_h, const_vh, defines = compile_verilog(env)
+#pdb.set_trace()
+
+design = SConscript(
+    'src/SConscript',
+    variant_dir=co_build_dir,
+    exports=['env', 'deps', 'linklibs'])
+
+#build_libgem5_cmd = "scons -j6 --with-cxx-config --without-python --without-tcmalloc build/X86_VI_hammer/libgem5_" + gem5_variant + shlibsuffix + " --verbose --default=../design/gpgpu/build_opts/X86_VI_hammer EXTRAS=design/gpgpu"
+build_libgem5_cmd = "scons -j%d" % num_cpus + " --with-cxx-config --without-tcmalloc build/X86_VI_hammer/libgem5_" + gem5_variant + shlibsuffix + " --verbose --default=../design/gpgpu/build_opts/X86_VI_hammer EXTRAS=design/gpgpu LDFLAGS_EXTRA=-fvisibility=hidden"
+
+#env.Command(os.path.join(gem5_root, 'build', gem5_arch, 'libgem5_' + gem5_variant + shlibsuffix), "", 'cd ' + gem5_root + ";" + build_libgem5_cmd)
+
+##### libcudart.so
+libcudart_src=os.path.join(design_root, 'libcuda', 'libcudart.so')
+libcudart_dst=os.path.join(design_root, 'cosim', 'libcudart.so')
+
+#env.Command(os.path.join(design_root, 'libgem5cuda', 'libgem5cuda.a'), os.path.join(design_root, 'libgem5cuda', 'gem5cuda_runtime_api.cc'), 'make -C ' + os.path.join(design_root, 'libgem5cuda'))
+libcuda_csrc = glob.glob(os.path.join(design_root, 'libcuda/*.cc'))
+libcuda_csrc = glob.glob(os.path.join(design_root, 'libcuda/*.h'))
+libcuda_csrc = glob.glob(os.path.join(design_root, 'libcuda/*/*.cc'))
+libcuda_csrc += glob.glob(os.path.join(design_root, 'libcuda/*/*.h'))
+libcuda_csrc += glob.glob(os.path.join(design_root, 'libcuda/*/Makefile'))
+libcuda_csrc += glob.glob(os.path.join(design_root, 'libcuda/*/*.l'))
+libcuda_csrc += glob.glob(os.path.join(design_root, 'libcuda/*/*.y'))
+
+env.Command(libcudart_src, libcuda_csrc, 'make -C ' + os.path.join(design_root, 'libcuda'))
+env.Command(libcudart_dst, libcudart_src, Copy("$TARGET", "$SOURCE"))
+
+##### libumd.so
+libumd_src=os.path.join(design_root, 'opu/umd/build/libumd.so')
+libumd_dst=os.path.join(design_root, 'cosim/libumd.so')
+buildumd = env.Command(libumd_src, [], "cd {} && ./build.sh libumd.so".format(os.path.join(design_root, 'opu/umd')))
+env.AlwaysBuild(buildumd)
+
+env.Command(libumd_dst, libumd_src, Copy("$TARGET", "$SOURCE"))
+
+##### libplatlibcuda.so
+libplatlibcuda_src=os.path.join(design_root, 'opu/umd/build/libplatlibcuda.so')
+libplatlibcuda_dst=os.path.join(design_root, 'cosim/libplatlibcuda.so')
+buildplatlibcuda = env.Command(libplatlibcuda_src, [], "cd {} && ./build.sh libplatlibcuda.so".format(os.path.join(design_root, 'opu/umd')))
+env.AlwaysBuild(buildplatlibcuda)
+
+env.Command(libplatlibcuda_dst, libplatlibcuda_src, Copy("$TARGET", "$SOURCE"))
+
+##### libplatlibgem5cuda.so
+libplatlibgem5cuda_src=os.path.join(design_root, 'opu/umd/build/libplatlibgem5cuda.so')
+libplatlibgem5cuda_dst=os.path.join(design_root, 'cosim/libplatlibgem5cuda.so')
+buildplatlibgem5cuda = env.Command(libplatlibgem5cuda_src, [], "cd {} && ./build.sh libplatlibgem5cuda.so".format(os.path.join(design_root, 'opu/umd')))
+env.AlwaysBuild(buildplatlibgem5cuda)
+
+env.Command(libplatlibgem5cuda_dst, libplatlibgem5cuda_src, Copy("$TARGET", "$SOURCE"))
+
+##### libplatgem5umd.so
+libplatgem5umd_src=os.path.join(design_root, 'opu/umd/build/libplatgem5umd.so')
+libplatgem5umd_dst=os.path.join(design_root, 'cosim/libplatgem5umd.so')
+buildplatgem5umd = env.Command(libplatgem5umd_src, [], "cd {} && ./build.sh libplatgem5umd.so".format(os.path.join(design_root, 'opu/umd')))
+env.AlwaysBuild(buildplatgem5umd)
+
+env.Command(libplatgem5umd_dst, libplatgem5umd_src, Copy("$TARGET", "$SOURCE"))
+
+##### libplatgem5kmd.so
+libplatgem5kmd_src=os.path.join(design_root, 'opu/umd/build/libplatgem5kmd.so')
+libplatgem5kmd_dst=os.path.join(design_root, 'cosim/libplatgem5kmd.so')
+buildplatgem5kmd = env.Command(libplatgem5kmd_src, [], "cd {} && ./build.sh libplatgem5kmd.so".format(os.path.join(design_root, 'opu/umd')))
+env.AlwaysBuild(buildplatgem5kmd)
+
+env.Command(libplatgem5kmd_dst, libplatgem5kmd_src, Copy("$TARGET", "$SOURCE"))
+
+
+
+##### libisasim.so
+libisasim_src=os.path.join(design_root, 'opu/isasim/build/libisasim.so')
+libisasim_dst=os.path.join(design_root, 'cosim/libisasim.so')
+buildisasim = env.Command(libisasim_src, [], "cd {} && ./build.sh".format(os.path.join(design_root, 'opu/isasim')))
+env.AlwaysBuild(buildisasim)
+
+env.Command(libisasim_dst, libisasim_src, Copy("$TARGET", "$SOURCE"))
+
+##### libopusim.so
+libopusim_src=os.path.join(design_root, 'opu/opusim/build/libopusim.so')
+libopusim_dst=os.path.join(design_root, 'cosim/libopusim.so')
+buildopusim = env.Command(libopusim_src, [], "cd {} && ./build.sh".format(os.path.join(design_root, 'opu/opusim')))
+env.AlwaysBuild(buildopusim)
+
+env.Command(libopusim_dst, libopusim_src, Copy("$TARGET", "$SOURCE"))
+
+
+#### Dependency
+Depends(libcudart_src, libumd_dst)
+Depends(libisasim_src, libcudart_dst)
+Depends(libopusim_src, libisasim_dst)
+Depends(libplatlibcuda_src, libcudart_dst)
+Depends(libplatlibgem5cuda_src, libcudart_dst)
+Depends(libplatgem5umd_src, libcudart_dst)
+Depends(libplatgem5kmd_src, libcudart_dst)
+
+Depends(design, libcudart_dst)
+Depends(design, libplatlibcuda_dst)
+Depends(design, libplatlibgem5cuda_dst)
+Depends(design, libplatgem5umd_dst)
+Depends(design, libplatgem5kmd_dst)
+Depends(design, libisasim_dst)
+Depends(design, libopusim_dst)
+
+#Default(ex_master + ex_slave + design)
+Default(design)

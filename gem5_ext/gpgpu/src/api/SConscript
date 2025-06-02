@@ -1,0 +1,19 @@
+Import('*')
+Import('main')
+
+if env['TARGET_ISA'] != 'no':
+    Source('gpu_syscall_helper.cc')
+    #Source('cuda_syscalls.cc', Werror=False)
+    #Source('cuda_syscalls.cc', append={'CXXFLAGS': '-Wno-error=pointer-arith -Wno-error=unused-variable -Wno-error=type-limits'})
+    Source('libcuda_syscalls.cc', append={'CXXFLAGS': '-Wno-error=pointer-arith -Wno-error=unused-variable -Wno-error=type-limits -Wno-error=unused-function'})
+    Source('opu_umd_syscalls.cc', append={'CXXFLAGS': '-Wno-error=pointer-arith -Wno-error=unused-variable -Wno-error=type-limits -Wno-error=unused-function'})
+    Source('opu_kmd_syscalls.cc', append={'CXXFLAGS': '-Wno-error=pointer-arith -Wno-error=unused-variable -Wno-error=type-limits -Wno-error=unused-function'})
+    #Source('opu_kmd_syscalls.cc', append={'CXXFLAGS': '-I/mnt/d/source/github/sim/mixlang/mlvm/src/cmdio'})
+    #myenv = main.Clone()
+
+#main.Append(LIBS=['cmdio_api'])
+#main.Prepend(LIBPATH=[Dir('/mnt/d/source/github/sim/mixlang/build/lib')])
+
+DebugFlag('GPUSyscalls')
+DebugFlag('OPUUMDSyscalls')
+DebugFlag('OPUKMDSyscalls')

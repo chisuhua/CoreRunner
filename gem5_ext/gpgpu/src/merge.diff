@@ -1,0 +1,788 @@
+diff --git a/design/gpgpu/src/api/libcuda_syscalls.cc b/design/gpgpu/src/api/libcuda_syscalls.cc
+index 96874ef98c..df013ea2b3 100644
+--- a/design/gpgpu/src/api/libcuda_syscalls.cc
++++ b/design/gpgpu/src/api/libcuda_syscalls.cc
+@@ -161,6 +161,7 @@
+ #include "gpgpusim_entrypoint.h"
+ #include "gpu/gpgpu-sim/cuda_gpu.hh"
+ #include "stream_manager.h"
++#include "../libcuda_sim/gpgpu_context.h"
+ #include "cpu/simple_thread.hh"
+ #include "arch/x86/vecregs.hh"
+ 
+@@ -168,19 +169,12 @@
+ 
+ typedef struct CUstream_st *cudaStream_t;
+ 
+-// move from cuda_runtime_api.cc
+-std::map<unsigned, std::set<std::string> > version_filename;
+-
+ static int load_static_globals(GPUSyscallHelper *helper, symbol_table *symtab, unsigned min_gaddr);
+ static int load_constants(GPUSyscallHelper *helper, symbol_table *symtab, addr_t min_gaddr);
+ 
+ unsigned g_active_device = 0; // Active CUDA-enabled GPU that runs the code
+-long long g_program_memory_start = 0xC0000000;
+-
+ cudaError_t g_last_cudaError = cudaSuccess;
+ 
+-extern stream_manager *g_stream_manager;
+-
+ using namespace gem5;
+ /*
+ class AppSystem {
+@@ -358,7 +352,7 @@ kernel_info_t *gpgpu_cuda_ptx_sim_init_grid(gpgpu_ptx_sim_arg_list_t args,
+    }
+ 
+    entry->finalize(result->get_param_memory());
+-   g_ptx_kernel_count++;
++   // g_ptx_kernel_count++;
+ 
+    return result;
+ }
+@@ -377,6 +371,7 @@ kernel_info_t *gpgpu_cuda_ptx_sim_init_grid(gpgpu_ptx_sim_arg_list_t args,
+ # endif
+ #endif
+ 
++#if 0
+ class kernel_config {
+   public:
+     kernel_config(dim3 GridDim, dim3 BlockDim, size_t sharedMem, struct CUstream_st *stream)
+@@ -402,10 +397,11 @@ class kernel_config {
+     struct CUstream_st *m_stream;
+     gpgpu_ptx_sim_arg_list_t m_args;
+ };
++#endif
+ 
+ using namespace gem5;
+ 
+-extern "C" void ptxinfo_addinfo()
++extern "C" void gem5_ptxinfo_addinfo()
+ {
+     if (!strcmp("__cuda_dummy_entry__",get_ptxinfo_kname())) {
+       // this string produced by ptxas for empty ptx files (e.g., bandwidth test)
+@@ -589,15 +585,15 @@ libcudaMemcpy(ThreadContext *tc, gpusyscall_t *call_params) {
+     if (sim_kind == cudaMemcpyHostToDevice) {
+         stream_operation mem_op((const void*)sim_src, (size_t)sim_dst, sim_count, 0);
+         mem_op.setThreadContext(tc);
+-        g_stream_manager->push(mem_op);
++        cudaGPU->getStreamManager()->push(mem_op);
+     } else if (sim_kind == cudaMemcpyDeviceToHost) {
+         stream_operation mem_op((size_t)sim_src, (void*)sim_dst, sim_count, 0);
+         mem_op.setThreadContext(tc);
+-        g_stream_manager->push(mem_op);
++        cudaGPU->getStreamManager()->push(mem_op);
+     } else if (sim_kind == cudaMemcpyDeviceToDevice) {
+         stream_operation mem_op((size_t)sim_src, (size_t)sim_dst, sim_count, 0);
+         mem_op.setThreadContext(tc);
+-        g_stream_manager->push(mem_op);
++        cudaGPU->getStreamManager()->push(mem_op);
+     } else {
+         panic("GPGPU-Sim PTX: cudaMemcpy - ERROR : unsupported cudaMemcpyKind\n");
+     }
+@@ -676,7 +672,7 @@ libcudaMemcpyToSymbol(ThreadContext *tc, gpusyscall_t *call_params) {
+     assert(sim_kind == cudaMemcpyHostToDevice);
+     stream_operation mem_op((const void*)sim_src, (const char*)sim_symbol, sim_count, sim_offset, NULL);
+     mem_op.setThreadContext(tc);
+-    g_stream_manager->push(mem_op);
++    cudaGPU->getStreamManager()->push(mem_op);
+ 
+     bool suspend = cudaGPU->needsToBlock();
+     assert(suspend);
+@@ -703,7 +699,7 @@ libcudaMemcpyFromSymbol(ThreadContext *tc, gpusyscall_t *call_params) {
+     assert(sim_kind == cudaMemcpyDeviceToHost);
+     stream_operation mem_op((const char*)sim_symbol, (void*)sim_dst, sim_count, sim_offset, NULL);
+     mem_op.setThreadContext(tc);
+-    g_stream_manager->push(mem_op);
++    cudaGPU->getStreamManager()->push(mem_op);
+ 
+     bool suspend = cudaGPU->needsToBlock();
+     assert(suspend);
+@@ -803,7 +799,7 @@ libcudaMemset(ThreadContext *tc, gpusyscall_t *call_params)
+     } else {
+         stream_operation mem_op((size_t)sim_mem, sim_c, sim_count, 0);
+         mem_op.setThreadContext(tc);
+-        g_stream_manager->push(mem_op);
++        cudaGPU->getStreamManager()->push(mem_op);
+         g_last_cudaError = cudaSuccess;
+         helper.setReturn((uint8_t*)&g_last_cudaError, sizeof(cudaError_t));
+ 
+@@ -1110,44 +1106,24 @@ void libgem5cudaLaunch(ThreadContext *tc, gpusyscall_t *call_params)
+     CudaGPU::getCudaGPU(g_active_device)->checkUpdateThreadContext(tc);
+ 
+     Addr sim_hostFun = *((Addr*)helper.getParam(0, true));
+-    // kernel_info_t *grid = ((kernel_info_t*)helper.getParam(1, true));
+ 
+     CudaGPU *cudaGPU = CudaGPU::getCudaGPU(g_active_device);
+     char *mode = getenv("PTX_SIM_MODE_FUNC");
++    int ptx_sim_mode;
+     if (mode)
+-        sscanf(mode,"%u", &g_ptx_sim_mode);
++        sscanf(mode,"%u", &ptx_sim_mode);
+     assert(!g_cuda_launch_stack.empty());
+     kernel_config config = g_cuda_launch_stack.back();
+     struct CUstream_st *stream = config.get_stream();
+     DPRINTF(GPUSyscalls, "gem5 GPU Syscall: cudaLaunch(tc = %p, hostFun* = %x)\n", tc, sim_hostFun);
+-
+     kernel_info_t *grid = gpgpu_cuda_ptx_sim_init_grid(config.get_args(), config.grid_dim(), config.block_dim(), cudaGPU->get_kernel((const char*)sim_hostFun));
+-
+     grid->set_inst_base_vaddr(cudaGPU->getInstBaseVaddr());
+     std::string kname = grid->name();
+-    stream_operation op(grid, g_ptx_sim_mode, stream);
++    stream_operation op(grid, ptx_sim_mode, stream);
+     op.setThreadContext(tc);
+-    g_stream_manager->push(op);
++    cudaGPU->getStreamManager()->push(op);
+     g_cuda_launch_stack.pop_back();
+     g_last_cudaError = cudaSuccess;
+-
+-    // FIXME hack temp
+-#if 0
+-    char *device_mstart = getenv("CUDA_PROGRAM_MEMORY_START");
+-    if (device_mstart)
+-        sscanf(device_mstart,"%llx", &g_program_memory_start);
+-
+-    int program_memory_size = 0x1000;
+-
+-    // void *device_program_memory = malloc(program_memory_size);
+-    void *ptr = checkedAlignedAlloc(program_memory_size);
+-    g_program_memory_start = (long long)ptr;
+-
+-    touchPages((unsigned char*)ptr, program_memory_size);
+-
+-    // cudaGPU->registerDeviceMemory(tc, 0xF0000000, 0x4000);
+-    cudaGPU->registerDeviceMemory(tc, (Addr)ptr, program_memory_size);
+-#endif
+ }
+ 
+ size_t getMaxThreadsPerBlock(struct cudaFuncAttributes attr) {
+@@ -1362,9 +1338,9 @@ get_local_alloc_size(CudaGPU *cudaGPU) {
+     // usage per thread.
+     //
+     // FIXME
+-    return 0;
+-    // unsigned max_local_mem_per_thread = 8 * 1024;
+-    // return cores * threads_per_core * max_local_mem_per_thread;
++    // return 0;
++    unsigned max_local_mem_per_thread = 8 * 1024;
++    return cores * threads_per_core * max_local_mem_per_thread;
+ }
+ 
+ void
+@@ -1418,88 +1394,8 @@ void registerFatBinaryTop(GPUSyscallHelper *helper,
+ 
+ }
+ 
+-void sysgem5gpu_extract_ptx_files_using_cuobjdump(ThreadContext *tc, gpusyscall_t *call_params)
+-{
+-    GPUSyscallHelper helper(tc, call_params);
+-    CudaGPU::getCudaGPU(g_active_device)->checkUpdateThreadContext(tc);
+-
+-    Addr ptx_list_file_name = *((Addr*)helper.getParam(0, true));
+-    const char* fname = new char[MAX_STRING_LEN];
+-    helper.readString(ptx_list_file_name, (uint8_t*)fname, MAX_STRING_LEN);
+-
+-
+-    std::ifstream infile(fname);
+-    std::string line;
+-    while (std::getline(infile, line))
+-    {
+-         //int pos = line.find(std::string(get_app_binary_name(app_binary)));
+-         const char *ptx_file = line.c_str();
+-         int pos1 = line.find("sm_");
+-         int pos2 = line.find_last_of(".");
+-         if (pos1==std::string::npos&&pos2==std::string::npos){
+-             printf("ERROR: PTX list is not in correct format");
+-             exit(0);
+-         }
+-         std::string vstr = line.substr(pos1+3,pos2-pos1-3);
+-         int version = atoi(vstr.c_str());
+-         if (version_filename.find(version)==version_filename.end()){
+-            version_filename[version] = std::set<std::string>();
+-         }
+-         printf("LIBCUDA INFO: version_filename[%d] = %s\n", version, line.c_str());
+-         version_filename[version].insert(line);
+-    }
+-}
+-
+-void
+-sysgem5gpu_cuobjdumpParseBinary(ThreadContext *tc, gpusyscall_t *call_params)
+-{
+-    GPUSyscallHelper helper(tc, call_params);
+-    CudaGPU::getCudaGPU(g_active_device)->checkUpdateThreadContext(tc);
+-
+-    Addr ptxfile = *((Addr*)helper.getParam(0, true));
+-    unsigned handle = *((unsigned int*)helper.getParam(1));
+-    char* fname = new char[MAX_STRING_LEN];
+-    helper.readString(ptxfile, (uint8_t*)fname, MAX_STRING_LEN);
+-
+-    symbol_table* symtab;
+-    if (strcmp(fname, "default") != 0) {
+-        symtab = gpgpu_ptx_sim_load_ptx_from_filename(fname);
+-    } else {
+-        //loops through all ptx files from smallest sm version to largest
+-        std::map<unsigned,std::set<std::string> >::iterator itr_m;
+-        for (itr_m = version_filename.begin(); itr_m!=version_filename.end(); itr_m++){
+-           std::set<std::string>::iterator itr_s;
+-           for (itr_s = itr_m->second.begin(); itr_s!=itr_m->second.end(); itr_s++){
+-              std::string ptx_filename = *itr_s;
+-              printf("LIBCUDA PTX: Parsing %s\n",ptx_filename.c_str());
+-              symtab = gpgpu_ptx_sim_load_ptx_from_filename( ptx_filename.c_str() );
+-           }
+-        }
+-    }
+-
+-    // register in cudaRegisterFatBinary
+-    // registerFatBinaryTop(&helper, symtab, handle);
+-
+-    // FIXME checkout libcuda_syscalls on load_global_const
+-    // load_static_globals(&helper, symtab,STATIC_ALLOC_LIMIT); // ,context->get_device()->get_gpgpu());
+-    // load_constants(&helper, symtab,STATIC_ALLOC_LIMIT); // ,context->get_device()->get_gpgpu());
+-    /*
+-    std::map<unsigned,std::set<std::string> >::iterator itr_m;
+-    for (itr_m = version_filename.begin(); itr_m!=version_filename.end(); itr_m++){
+-       std::set<std::string>::iterator itr_s;
+-       for (itr_s = itr_m->second.begin(); itr_s!=itr_m->second.end(); itr_s++){
+-          std::string ptx_filename = *itr_s;
+-          printf("LIBCUDA PTX: Loading PTXInfo from %s\n",ptx_filename.c_str());
+-          gpgpu_ptx_info_load_from_filename( ptx_filename.c_str(), itr_m->first );
+-       }
+-    }
+-    */
+-
+-    // symbol *s = symtab->lookup("_Z9vectorAddPKfS0_Pfi");
+-    // printf("symbol lookup %s", s->name().c_str());
+-    helper.setReturn((uint8_t*)&symtab, sizeof(void*));
+-}
+ 
++#if 0
+ void
+ sysgem5gpu_symbol_lookup(ThreadContext *tc, gpusyscall_t *call_params)
+ {
+@@ -1538,6 +1434,7 @@ sysgem5gpu_symbol_get_function(ThreadContext *tc, gpusyscall_t *call_params)
+     // if (!cudaGPU->isManagingGPUMemory()) {
+     helper.setReturn((uint8_t*)&f, sizeof(void*));
+ }
++#endif
+ 
+ void
+ libgem5cudaRegisterFatBinary(ThreadContext *tc, gpusyscall_t *call_params)
+@@ -1564,16 +1461,6 @@ libgem5cudaRegisterFatBinary(ThreadContext *tc, gpusyscall_t *call_params)
+     // registerFatBinaryTop(&helper, sim_fatCubin, sim_binSize);
+     registerFatBinaryTop(&helper, registering_symtab, registering_fat_cubin_handle);
+ 
+-    std::map<unsigned,std::set<std::string> >::iterator itr_m;
+-    for (itr_m = version_filename.begin(); itr_m!=version_filename.end(); itr_m++){
+-       std::set<std::string>::iterator itr_s;
+-       for (itr_s = itr_m->second.begin(); itr_s!=itr_m->second.end(); itr_s++){
+-          std::string ptx_filename = *itr_s;
+-          printf("LIBCUDA PTX: Loading PTXInfo from %s\n",ptx_filename.c_str());
+-          gpgpu_ptx_info_load_from_filename( ptx_filename.c_str(), itr_m->first );
+-       }
+-    }
+-
+     // FIXME now cudart load global and use cudaMemcpy instead
+     registering_allocation_size = get_global_and_constant_alloc_size(registering_symtab);
+ 
+@@ -1587,22 +1474,19 @@ libgem5cudaRegisterFatBinary(ThreadContext *tc, gpusyscall_t *call_params)
+ 
+     if (!cudaGPU->isManagingGPUMemory()) {
+         helper.setReturn((uint8_t*)&registering_allocation_size, sizeof(int));
+-
+         // FIXME hack temp for inst text
+         // cudaGPU->registerDeviceMemory(tc, 0xF0000000, 0x4000);
+     } else {
+-
+-
+         assert(!registering_allocation_ptr);
+         registering_allocation_ptr = cudaGPU->allocateGPUMemory(registering_allocation_size);
+-
+         // FIXME
+-        g_program_memory_start = registering_allocation_ptr;
++        // g_program_memory_start = registering_allocation_ptr;
+         int zero_allocation = 0;
+         helper.setReturn((uint8_t*)&zero_allocation, sizeof(int));
+     }
+ }
+ 
++#if 0
+ void
+ libgem5cudaRegisterPtxInfo(ThreadContext *tc, gpusyscall_t *call_params)
+ {
+@@ -1620,7 +1504,7 @@ libgem5cudaRegisterPtxInfo(ThreadContext *tc, gpusyscall_t *call_params)
+     // TODO ptx_loader.cc ptxinfo_parse know ptxinfo_kname, ptxinfo_kinfo
+     cudaGPU->add_ptxinfo(ptxinfo_kname, ptxinfo_kinfo);
+ }
+-
++#endif
+ 
+ unsigned int registerFatBinaryBottom(GPUSyscallHelper *helper, Addr sim_alloc_ptr)
+ {
+@@ -1665,7 +1549,7 @@ libcudaRegisterFatBinaryFinalize(ThreadContext *tc, gpusyscall_t *call_params)
+     if (!cudaGPU->isManagingGPUMemory()) {
+         // cudaGPU->saveFatBinaryInfoBottom(sim_alloc_ptr);
+         handle = registerFatBinaryBottom(&helper, sim_alloc_ptr);
+-        g_program_memory_start = sim_alloc_ptr;
++        // g_program_memory_start = sim_alloc_ptr;
+         cudaGPU->registerDeviceMemory(tc, sim_alloc_ptr, 0x4000);
+     } else {
+         assert(!sim_alloc_ptr);
+@@ -1674,7 +1558,6 @@ libcudaRegisterFatBinaryFinalize(ThreadContext *tc, gpusyscall_t *call_params)
+         handle = registerFatBinaryBottom(&helper, registering_allocation_ptr);
+     }
+ 
+-
+     // TODO: If local memory has been allocated and has been mapped by the CPU
+     // thread, register the allocation with the GPU for address translation.
+     if (registering_local_alloc_ptr /*FIXME && !cudaGPU->getAccessHostPagetable()*/) {
+@@ -1771,16 +1654,16 @@ libcudaRegisterFunction(ThreadContext *tc, gpusyscall_t *call_params)
+     delete[] device_fun;
+ }
+ 
+-void register_var(Addr sim_deviceAddress, const char* deviceName, int sim_size, int sim_constant, int sim_global, int sim_ext, Addr sim_hostVar)
++void register_var(CudaGPU *cudaGPU, Addr sim_deviceAddress, const char* deviceName, int sim_size, int sim_constant, int sim_global, int sim_ext, Addr sim_hostVar)
+ {
+     DPRINTF(GPUSyscalls, "gem5 GPU Syscall: __cudaRegisterVar(fatCubinHandle** = %x, hostVar* = 0x%x, deviceAddress* = 0x%x, deviceName* = %s, ext = %d, size = %d, constant = %d, global = %d)\n",
+             /*sim_fatCubinHandle*/ 0, sim_hostVar, sim_deviceAddress,
+             deviceName, sim_ext, sim_size, sim_constant, sim_global);
+ 
+     if (sim_constant && !sim_global && !sim_ext) {
+-        gpgpu_ptx_sim_register_const_variable((void*)sim_hostVar, deviceName, sim_size);
++        cudaGPU->getGPGPUCtx()->func_sim->gpgpu_ptx_sim_register_const_variable((void*)sim_hostVar, deviceName, sim_size);
+     } else if (!sim_constant && !sim_global && !sim_ext) {
+-        gpgpu_ptx_sim_register_global_variable((void*)sim_hostVar, deviceName, sim_size);
++        cudaGPU->getGPGPUCtx()->func_sim->gpgpu_ptx_sim_register_global_variable((void*)sim_hostVar, deviceName, sim_size);
+     } else {
+         panic("__cudaRegisterVar: Don't know how to register variable!");
+     }
+@@ -1806,7 +1689,7 @@ void libcudaRegisterVar(ThreadContext *tc, gpusyscall_t *call_params)
+ 
+     cudaGPU->saveVar(sim_deviceAddress, deviceName, sim_size, sim_constant, sim_global, sim_ext, sim_hostVar);
+ 
+-    register_var(sim_deviceAddress, deviceName, sim_size, sim_constant, sim_global, sim_ext, sim_hostVar);
++    register_var(cudaGPU, sim_deviceAddress, deviceName, sim_size, sim_constant, sim_global, sim_ext, sim_hostVar);
+ }
+ 
+ //  void __cudaRegisterShared(void **fatCubinHandle, void **devicePtr)
+@@ -2052,7 +1935,7 @@ static int load_constants(GPUSyscallHelper *helper, symbol_table *symtab, addr_t
+    DPRINTF(GPUSyscalls, "GPGPU-Sim PTX: finished loading constants (%u bytes total).\n", nc_bytes);
+    return nc_bytes;
+ }
+-
++#if 0
+ void
+ sysgem5gpu_active(ThreadContext *tc, gpusyscall_t *call_params)
+ {
+@@ -2087,4 +1970,4 @@ sysgem5gpu_system_call(ThreadContext *tc, gpusyscall_t *call_params)
+     helper.setReturn((uint8_t*)&result, sizeof(int));
+     delete[] command_string;
+ }
+-
++#endif
+diff --git a/design/gpgpu/src/api/libcuda_syscalls.hh b/design/gpgpu/src/api/libcuda_syscalls.hh
+index 29f7e5bb33..8ed0c4b702 100644
+--- a/design/gpgpu/src/api/libcuda_syscalls.hh
++++ b/design/gpgpu/src/api/libcuda_syscalls.hh
+@@ -35,7 +35,10 @@
+ /*******************************
+        CUDA API MEMBERS
+ ********************************/
+-
++#if !defined(__DRIVER_TYPES_H__)
++#include "driver_types.h"
++#endif
++/*
+ enum cudaError
+ {
+     cudaSuccess                           =      0,   // No errors
+@@ -103,6 +106,7 @@ enum cudaMemcpyKind
+     cudaMemcpyDeviceToHost        =   2,      // Device -> Host
+     cudaMemcpyDeviceToDevice      =   3       // Device -> Device
+ };
++*/
+ 
+ const char* cudaMemcpyKindStrings[] =
+ {
+@@ -160,13 +164,15 @@ typedef struct __cudaFatCudaBinaryRec {
+ } __cudaFatCudaBinary;
+ 
+ /*DEVICE_BUILTIN*/
++/*
+ struct uint3
+ {
+   unsigned int x, y, z;
+ };
++*/
+ 
+ typedef struct CUevent_st *cudaEvent_t;
+-
++/*
+ typedef struct cudaFuncAttributes {
+    size_t sharedSizeBytes;
+    size_t constSizeBytes;
+@@ -177,6 +183,7 @@ typedef struct cudaFuncAttributes {
+    int binaryVersion;
+    int __cudaReserved[6];
+ } cudaFuncAttributes;
++*/
+ 
+ /*******************************
+      CUDA API GEM5 HANDLERS
+@@ -242,9 +249,9 @@ void cudaThreadExit(ThreadContext *tc, gpusyscall_t *call_params);
+ void cudaThreadSynchronize(ThreadContext *tc, gpusyscall_t *call_params);
+ void __cudaSynchronizeThreads(ThreadContext *tc, gpusyscall_t *call_params);
+ void libgem5cudaRegisterFatBinary(ThreadContext *tc, gpusyscall_t *call_params);
+-void libgem5cudaRegisterPtxInfo(ThreadContext *tc, gpusyscall_t *call_params);
+-void sysgem5gpu_active(ThreadContext *tc, gpusyscall_t *call_params);
+-void sysgem5gpu_system_call(ThreadContext *tc, gpusyscall_t *call_params);
++// void libgem5cudaRegisterPtxInfo(ThreadContext *tc, gpusyscall_t *call_params);
++// void sysgem5gpu_active(ThreadContext *tc, gpusyscall_t *call_params);
++// void sysgem5gpu_system_call(ThreadContext *tc, gpusyscall_t *call_params);
+ void libcudaRegisterFatBinaryFinalize(ThreadContext *tc, gpusyscall_t *call_params);
+ void __cudaCheckAllocateLocal(ThreadContext *tc, gpusyscall_t *call_params);
+ void __cudaSetLocalAllocation(ThreadContext *tc, gpusyscall_t *call_params);
+@@ -259,10 +266,10 @@ void cudaGLMapBufferObject(ThreadContext *tc, gpusyscall_t *call_params);
+ void cudaGLUnmapBufferObject(ThreadContext *tc, gpusyscall_t *call_params);
+ void cudaGLUnregisterBufferObject(ThreadContext *tc, gpusyscall_t *call_params);
+ 
+-void sysgem5gpu_extract_ptx_files_using_cuobjdump(ThreadContext *tc, gpusyscall_t *call_params);
+-void sysgem5gpu_cuobjdumpParseBinary(ThreadContext *tc, gpusyscall_t *call_params);
+-void sysgem5gpu_symbol_lookup(ThreadContext *tc, gpusyscall_t *call_params);
+-void sysgem5gpu_symbol_get_function(ThreadContext *tc, gpusyscall_t *call_params);
++// void sysgem5gpu_extract_ptx_files_using_cuobjdump(ThreadContext *tc, gpusyscall_t *call_params);
++// void sysgem5gpu_cuobjdumpParseBinary(ThreadContext *tc, gpusyscall_t *call_params);
++// void sysgem5gpu_symbol_lookup(ThreadContext *tc, gpusyscall_t *call_params);
++// void sysgem5gpu_symbol_get_function(ThreadContext *tc, gpusyscall_t *call_params);
+ 
+ #if (CUDART_VERSION >= 2010)
+ 
+@@ -378,14 +385,16 @@ cudaFunc_t gpgpu_funcs[] = {
+         libcudaRegisterDeviceMemory,    /* 82 */
+         cudaBlockThread,    /* 83 */
+         __cudaCheckAllocateLocal,    /* 84 */
+-        __cudaSetLocalAllocation,    /* 85 */
+-        libgem5cudaRegisterPtxInfo,    /* 86 */
++        __cudaSetLocalAllocation    /* 85 */
++#if 0
++        libgem5cudaRegisterPtxInfo    /* 86 */
+         sysgem5gpu_active,    /* 87 */
+         sysgem5gpu_system_call,    /* 88 */
+         sysgem5gpu_extract_ptx_files_using_cuobjdump,    /* 89 */
+         sysgem5gpu_cuobjdumpParseBinary,    /* 90 */
+         sysgem5gpu_symbol_lookup,        /* 91 */
+         sysgem5gpu_symbol_get_function  /* 92 */
++#endif
+ };
+ 
+ #endif
+diff --git a/design/gpgpu/src/gpu/atomic_operations.cc b/design/gpgpu/src/gpu/atomic_operations.cc
+index 8c27ff8269..adde2b8b81 100644
+--- a/design/gpgpu/src/gpu/atomic_operations.cc
++++ b/design/gpgpu/src/gpu/atomic_operations.cc
+@@ -79,8 +79,8 @@ AtomicOpRequest::doAtomicOperation(uint8_t *read_data, uint8_t *write_data)
+       case ATOMIC_CAS_OP: {
+ 
+         switch (dataType) {
+-        case B32_TYPE:
+-        case U32_TYPE: {
++        case B32_TYPE_:
++        case U32_TYPE_: {
+             unsigned int mem_data = *((unsigned int*)read_data);
+             unsigned int reg_b_data = *((unsigned int*)&data[0]);
+             unsigned int reg_c_data = *((unsigned int*)&data[8]);
+@@ -109,7 +109,7 @@ AtomicOpRequest::doAtomicOperation(uint8_t *read_data, uint8_t *write_data)
+       case ATOMIC_ADD_OP: {
+ 
+         switch (dataType) {
+-          case S32_TYPE: {
++          case S32_TYPE_: {
+             int mem_data = *((int*)read_data);
+             int reg_data = *((int*)&data[0]);
+             int new_mem_data = reg_data + mem_data;
+@@ -121,7 +121,7 @@ AtomicOpRequest::doAtomicOperation(uint8_t *read_data, uint8_t *write_data)
+             break;
+           }
+ 
+-          case U32_TYPE: {
++          case U32_TYPE_: {
+             unsigned int mem_data = *((unsigned int*)read_data);
+             unsigned int reg_data = *((unsigned int*)&data[0]);
+             unsigned int new_mem_data = reg_data + mem_data;
+@@ -133,7 +133,7 @@ AtomicOpRequest::doAtomicOperation(uint8_t *read_data, uint8_t *write_data)
+             break;
+           }
+ 
+-          case F32_TYPE: {
++          case F32_TYPE_: {
+             float mem_data = *((float*)read_data);
+             float reg_data = *((float*)&data[0]);
+             float new_mem_data = reg_data + mem_data;
+@@ -160,7 +160,7 @@ AtomicOpRequest::doAtomicOperation(uint8_t *read_data, uint8_t *write_data)
+       case ATOMIC_INC_OP: {
+ 
+         switch (dataType) {
+-          case U32_TYPE: {
++          case U32_TYPE_: {
+             unsigned int mem_data = *((unsigned int*)read_data);
+             unsigned int reg_data = *((unsigned int*)&data[0]);
+             unsigned int new_mem_data =
+@@ -188,7 +188,7 @@ AtomicOpRequest::doAtomicOperation(uint8_t *read_data, uint8_t *write_data)
+       case ATOMIC_MAX_OP: {
+ 
+         switch (dataType) {
+-          case U32_TYPE: {
++          case U32_TYPE_: {
+             unsigned int mem_data = *((unsigned int*)read_data);
+             unsigned int reg_data = *((unsigned int*)&data[0]);
+             unsigned int new_mem_data =
+@@ -201,7 +201,7 @@ AtomicOpRequest::doAtomicOperation(uint8_t *read_data, uint8_t *write_data)
+             break;
+           }
+ 
+-          case S32_TYPE: {
++          case S32_TYPE_: {
+             int mem_data = *((int*)read_data);
+             int reg_data = *((int*)&data[0]);
+             int new_mem_data =
+@@ -229,7 +229,7 @@ AtomicOpRequest::doAtomicOperation(uint8_t *read_data, uint8_t *write_data)
+       case ATOMIC_MIN_OP: {
+ 
+         switch (dataType) {
+-          case S32_TYPE: {
++          case S32_TYPE_: {
+             int mem_data = *((int*)read_data);
+             int reg_data = *((int*)&data[0]);
+             int new_mem_data =
+@@ -242,7 +242,7 @@ AtomicOpRequest::doAtomicOperation(uint8_t *read_data, uint8_t *write_data)
+             break;
+           }
+ 
+-          case U32_TYPE: {
++          case U32_TYPE_: {
+             unsigned int mem_data = *((unsigned int*)read_data);
+             unsigned int reg_data = *((unsigned int*)&data[0]);
+             unsigned int new_mem_data =
+diff --git a/design/gpgpu/src/gpu/atomic_operations.hh b/design/gpgpu/src/gpu/atomic_operations.hh
+index 3179180d2b..e8691128f4 100644
+--- a/design/gpgpu/src/gpu/atomic_operations.hh
++++ b/design/gpgpu/src/gpu/atomic_operations.hh
+@@ -34,10 +34,10 @@ class AtomicOpRequest {
+ 
+     // The data type on which the atomic operates
+     enum DataType { INVALID_TYPE,
+-                    S32_TYPE,
+-                    U32_TYPE,
+-                    F32_TYPE,
+-                    B32_TYPE };
++                    S32_TYPE_,
++                    U32_TYPE_,
++                    F32_TYPE_,
++                    B32_TYPE_ };
+ 
+     // An identifier for the requester (e.g. GPU lane ID)
+     unsigned uniqueId;
+@@ -57,10 +57,10 @@ class AtomicOpRequest {
+ 
+     int dataSizeBytes() {
+         switch (dataType) {
+-          case S32_TYPE:
+-          case U32_TYPE:
+-          case F32_TYPE:
+-          case B32_TYPE:
++          case S32_TYPE_:
++          case U32_TYPE_:
++          case F32_TYPE_:
++          case B32_TYPE_:
+             return 4;
+           default:
+             panic("Unknown atomic type: %s\n", atomicOp);
+diff --git a/design/gpgpu/src/gpu/gpgpu-sim/cuda_core.hh b/design/gpgpu/src/gpu/gpgpu-sim/cuda_core.hh
+index f73b0a04bf..b9c35e9b6a 100644
+--- a/design/gpgpu/src/gpu/gpgpu-sim/cuda_core.hh
++++ b/design/gpgpu/src/gpu/gpgpu-sim/cuda_core.hh
+@@ -87,13 +87,13 @@ class CudaCore : public ClockedObject
+     getDataType(unsigned gpgpu_sim_value) {
+         switch (gpgpu_sim_value) {
+           case S32_TYPE:
+-            return AtomicOpRequest::S32_TYPE;
++            return AtomicOpRequest::S32_TYPE_;
+           case U32_TYPE:
+-            return AtomicOpRequest::U32_TYPE;
++            return AtomicOpRequest::U32_TYPE_;
+           case F32_TYPE:
+-            return AtomicOpRequest::F32_TYPE;
++            return AtomicOpRequest::F32_TYPE_;
+           case B32_TYPE:
+-            return AtomicOpRequest::B32_TYPE;
++            return AtomicOpRequest::B32_TYPE_;
+           default:
+             panic("Unknown atomic data type: %llu\n", gpgpu_sim_value);
+             break;
+diff --git a/design/gpgpu/src/gpu/gpgpu-sim/cuda_gpu.cc b/design/gpgpu/src/gpu/gpgpu-sim/cuda_gpu.cc
+index 6aea274cb6..e16047a705 100644
+--- a/design/gpgpu/src/gpu/gpgpu-sim/cuda_gpu.cc
++++ b/design/gpgpu/src/gpu/gpgpu-sim/cuda_gpu.cc
+@@ -47,6 +47,7 @@
+ #include "debug/CudaGPUPageTable.hh"
+ #include "debug/CudaGPUTick.hh"
+ #include "gpgpusim_entrypoint.h"
++#include "../libcuda_sim/gpgpu_context.h"
+ #include "gpu/gpgpu-sim/cuda_gpu.hh"
+ #include "mem/ruby/system/RubySystem.hh"
+ #include "params/CudaGPU.hh"
+@@ -57,7 +58,7 @@ using namespace std;
+ 
+ // FIXME
+ int no_of_ptx = 0;
+-extern char *ptx_line_stats_filename;
++char *ptx_line_stats_filename = "ptx_line_stats.rpt";
+ namespace gem5 {
+ 
+ vector<CudaGPU*> CudaGPU::gpuArray;
+@@ -67,6 +68,8 @@ void registerFatBinaryTop(GPUSyscallHelper *helper, Addr sim_fatCubin, size_t si
+ unsigned int registerFatBinaryBottom(GPUSyscallHelper *helper, Addr sim_alloc_ptr);
+ void register_var(Addr sim_deviceAddress, const char* deviceName, int sim_size, int sim_constant, int sim_global, int sim_ext, Addr sim_hostVar);
+ 
++static std::mutex tick_mutex;
++
+ CudaGPU::CudaGPU(const CudaGPUParams &p) :
+     ClockedObject(p), _params(&p), streamTickEvent(this),
+     clkDomain((SrcClockDomain*)p.clk_domain),
+@@ -111,8 +114,11 @@ CudaGPU::CudaGPU(const CudaGPUParams &p) :
+     cpMemoryBaseVaddr = virtualGPUBrkAddr;
+     cpMemoryBaseSize = TheISA::PageBytes * 10;  // reserve 10 page for cp scratch
+ 
++    // Initiaalize default gpgpu_context
++    gpgpu_ctx = new gpgpu_context();
++
+     // Initialize GPGPU-Sim
+-    theGPU = gem5_ptx_sim_init_perf(&streamManager, this, getConfigPath());
++    theGPU = gpgpu_ctx->gem5_ptx_sim_init_perf(&streamManager, this, getConfigPath());
+     theGPU->init();
+ 
+     // Set up the component wrappers in order to cycle the GPGPU-Sim
+@@ -344,21 +350,32 @@ void CudaGPU::registerCommandProcessor(CommandProcessor *cp)
+ }
+ 
+ void CudaGPU::streamTick() {
++    std::lock_guard<std::mutex> lock(tick_mutex);
+     DPRINTF(CudaGPUTick, "Stream Tick\n");
+ 
+     streamScheduled = false;
+ 
+     // launch operation on device if one is pending and can be run
+     stream_operation op = streamManager->front();
+-    op.do_operation(theGPU);
++    bool kickoff = op.do_operation(theGPU);
++
++    if (!kickoff) {
++        //cancel operation
++        //if( op.is_kernel() ) {
++        //    unsigned grid_uid = op.get_kernel()->get_uid();
++        //    m_grid_id_to_stream.erase(grid_uid);
++        //}
++        op.get_stream()->cancel_front();
++    }
+ 
+-    if (streamManager->ready()) {
++    if (!kickoff || streamManager->ready()) {
+         schedule(streamTickEvent, curTick() + streamDelay);
+         streamScheduled = true;
+     }
+ }
+ 
+ void CudaGPU::scheduleStreamEvent() {
++    std::lock_guard<std::mutex> lock(tick_mutex);
+     if (streamScheduled) {
+         DPRINTF(CudaGPUTick, "Already scheduled a tick, ignoring\n");
+         return;
+@@ -483,11 +500,13 @@ void CudaGPU::gpuPrintStats(std::ostream& out) {
+ 
+ 
+ void CudaGPU::printPTXFileLineStats() {
++#if 1
+     char *temp_ptx_line_stats_filename = ptx_line_stats_filename;
+     std::string outfile = simout.directory() + ptx_line_stats_filename;
+     ptx_line_stats_filename = (char*)outfile.c_str();
+-    ptx_file_line_stats_write_file();
++    gpgpu_ctx->stats->ptx_file_line_stats_write_file();
+     ptx_line_stats_filename = temp_ptx_line_stats_filename;
++#endif
+ }
+ 
+ void CudaGPU::memcpy(void *src, void *dst, size_t count, struct CUstream_st *_stream, stream_operation_type type) {
+@@ -499,8 +518,10 @@ void CudaGPU::memcpy_to_symbol(const char *hostVar, const void *src, size_t coun
+     // First, initialize the stream operation
+     beginStreamOperation(_stream);
+ 
++    unsigned dst = gpgpu_ctx->func_sim->gpgpu_ptx_hostvar_to_sym_address(hostVar, theGPU);
++#if 0
+     // Lookup destination address for transfer:
+-    std::string sym_name = gpgpu_ptx_sim_hostvar_to_sym_name(hostVar);
++    std::string sym_name = gpgpu_ctx->gpgpu_ptx_sim_hostvar_to_sym_name(hostVar);
+     std::map<std::string,symbol_table*>::iterator st = g_sym_name_to_symbol_table.find(sym_name.c_str());
+     assert(st != g_sym_name_to_symbol_table.end());
+     symbol_table *symtab = st->second;
+@@ -510,6 +531,7 @@ void CudaGPU::memcpy_to_symbol(const char *hostVar, const void *src, size_t coun
+     unsigned dst = sym->get_address() + offset;
+     printf("GPGPU-Sim PTX: gpgpu_ptx_sim_memcpy_symbol: copying %zu bytes to symbol %s+%zu @0x%x ...\n",
+            count, sym_name.c_str(), offset, dst);
++#endif
+ 
+     copyEngine->memcpy((Addr)src, (Addr)dst, count, stream_memcpy_host_to_device);
+ }
+@@ -517,7 +539,8 @@ void CudaGPU::memcpy_to_symbol(const char *hostVar, const void *src, size_t coun
+ void CudaGPU::memcpy_from_symbol(void *dst, const char *hostVar, size_t count, size_t offset, struct CUstream_st *_stream) {
+     // First, initialize the stream operation
+     beginStreamOperation(_stream);
+-
++    unsigned src = gpgpu_ctx->func_sim->gpgpu_ptx_hostvar_to_sym_address(hostVar, theGPU);
++#if 0
+     // Lookup destination address for transfer:
+     std::string sym_name = gpgpu_ptx_sim_hostvar_to_sym_name(hostVar);
+     std::map<std::string,symbol_table*>::iterator st = g_sym_name_to_symbol_table.find(sym_name.c_str());
+@@ -529,6 +552,8 @@ void CudaGPU::memcpy_from_symbol(void *dst, const char *hostVar, size_t count, s
+     unsigned src = sym->get_address() + offset;
+     printf("GPGPU-Sim PTX: gpgpu_ptx_sim_memcpy_symbol: copying %zu bytes from symbol %s+%zu @0x%x ...\n",
+            count, sym_name.c_str(), offset, src);
++#endif
++
+ 
+     copyEngine->memcpy((Addr)src, (Addr)dst, count, stream_memcpy_device_to_host);
+ }
+@@ -646,6 +671,9 @@ void CudaGPU::register_function( unsigned fat_cubin_handle, const char *hostFun,
+         assert( s != NULL );
+         function_info *f = s->get_pc();
+         assert( f != NULL );
++        // TODO schi hack reset gpgpu_ctx to cuda_gpu
++        f->gpgpu_ctx = gpgpu_ctx;
++        f->ptx_assemble();
+         m_kernel_lookup[hostFun] = f;
+     } else {
+         m_kernel_lookup[hostFun] = NULL;
+diff --git a/design/gpgpu/src/gpu/gpgpu-sim/cuda_gpu.hh b/design/gpgpu/src/gpu/gpgpu-sim/cuda_gpu.hh
+index 5f310289df..26bef87d28 100644
+--- a/design/gpgpu/src/gpu/gpgpu-sim/cuda_gpu.hh
++++ b/design/gpgpu/src/gpu/gpgpu-sim/cuda_gpu.hh
+@@ -189,6 +189,14 @@ class CudaGPU : public ClockedObject
+         return new_id;
+     }
+ 
++    gpgpu_context * getGPGPUCtx() {
++        return gpgpu_ctx;
++    }
++
++    stream_manager * getStreamManager () {
++        return streamManager;
++    };
++
+     struct CudaDeviceProperties
+     {
+         char   name[256];                 // ASCII string identifying device
+@@ -361,6 +369,7 @@ class CudaGPU : public ClockedObject
+     /// Pointers to GPGPU-Sim objects
+     gpgpu_sim *theGPU;
+     stream_manager *streamManager;
++    gpgpu_context *gpgpu_ctx;
+ 
+     /// Flag to make sure we don't schedule twice in the same tick
+     bool streamScheduled;

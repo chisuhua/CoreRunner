@@ -1,0 +1,106 @@
+# -*- mode:python -*-
+
+# Copyright (c) 2011 Mark D. Hill and David A. Wood
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met: redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer;
+# redistributions in binary form must reproduce the above copyright
+# notice, this list of conditions and the following disclaimer in the
+# documentation and/or other materials provided with the distribution;
+# neither the name of the copyright holders nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
+
+Import('*')
+#import pdb
+
+#pdb.set_trace()
+#env = env.Clone()
+intersim_path = Dir('.').srcnode().abspath
+network_path = Dir('./networks').srcnode().abspath
+router_path = Dir('./routers').srcnode().abspath
+power_path = Dir('./power').srcnode().abspath
+arbiter_path = Dir('./arbiters').srcnode().abspath
+allocator_path = Dir('./allocators').srcnode().abspath
+env.Append(CPPPATH=[intersim_path, network_path, router_path, power_path, arbiter_path, allocator_path])
+
+Source('batchtrafficmanager.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('booksim_config.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('buffer.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('buffer_state.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('config_utils.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('credit.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('flitchannel.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('flit.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('gputrafficmanager.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('injection.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('interconnect_interface.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers -Wno-error=undef'})
+Source('intersim_config.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('lex.yy.c', append={'CFLAGS': '-Wno-error=ignored-qualifiers -Wno-error=unused-function'})
+Source('main.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('misc_utils.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('module.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('outputset.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('packet_reply_info.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('rng_double_wrapper.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('rng_wrapper.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('routefunc.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('stats.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('traffic.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('trafficmanager.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('vc.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('y.tab.c', append={'CFLAGS': '-Wno-error=ignored-qualifiers'})
+
+Source('allocators/allocator.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('allocators/islip.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('allocators/loa.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('allocators/maxsize.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('allocators/pim.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('allocators/selalloc.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('allocators/separable.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('allocators/separable_input_first.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('allocators/separable_output_first.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('allocators/wavefront.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+
+Source('arbiters/arbiter.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('arbiters/matrix_arb.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('arbiters/prio_arb.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('arbiters/roundrobin_arb.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('arbiters/tree_arb.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+
+Source('networks/anynet.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('networks/cmesh.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('networks/dragonfly.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers -Wno-error=unused-but-set-variable -Wno-error=maybe-uninitialized'})
+Source('networks/fattree.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('networks/flatfly_onchip.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers -Wno-error=unused-but-set-variable'})
+Source('networks/fly.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('networks/kncube.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers -Wno-error=maybe-uninitialized'})
+Source('networks/network.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('networks/qtree.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers -Wno-error=maybe-uninitialized'})
+Source('networks/tree4.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers -Wno-error=maybe-uninitialized'})
+
+Source('power/buffer_monitor.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('power/power_module.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('power/switch_monitor.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+
+Source('routers/chaos_router.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('routers/event_router.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('routers/iq_router.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+Source('routers/router.cpp', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})

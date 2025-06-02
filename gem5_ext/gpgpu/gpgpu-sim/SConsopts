@@ -1,0 +1,5 @@
+Import('*')
+
+main.Append(CPPPATH=Dir('src'))
+#main.Prepend(CPPPATH=Dir('.'))
+#env.Append(CPPPATH=Dir('.'))

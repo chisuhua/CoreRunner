@@ -1,0 +1,36 @@
+import os
+import pdb
+
+Import('env')
+Import('deps')
+Import('compile_design')
+
+env = env.Clone()
+cwd = Dir('#./src/slave_axi4lite').srcnode().abspath
+
+src = [File('main.cc')]
+src_sc = [File('sc_target.cc'), File('target_to_axi4lite.cc')]
+
+vfiles = [File(os.path.join(cwd, 'axilite_dev.v'))]
+
+
+verilated_o, verilated_obj, verilated_header = compile_design(env, vfiles, "axilite_dev", "axi4lite_dev")
+
+verilated_dir = os.path.dirname(verilated_header)
+
+#pdb.set_trace()
+
+env.Append(CPPPATH=[verilated_dir])
+env.Append(CPPPATH=env['VERILATOR_ROOT'] + '/include')
+
+obj_sc = env.Object(src_sc)
+
+env.Depends(obj_sc, verilated_header)
+
+deps.append(File(verilated_o))
+deps.append(File(verilated_obj))
+
+bin = env.Program('gem5.sc', src + src_sc + deps)
+
+
+Return('bin')

@@ -1,0 +1,33 @@
+import os
+
+
+Import('env')
+Import('deps')
+Import('compile_design')
+
+env = env.Clone()
+cwd = Dir('#./src/master_axi4lite').srcnode().abspath
+
+
+src = [File('main.cc')]
+src_sc = [File('axi4lite_to_bridge.cc'), File('sc_initiator.cc')]
+
+vfiles = [File(os.path.join(cwd, 'axilite_master_dev.v'))]
+
+verilated_o, verilated_obj, verilated_header = compile_design(env, vfiles, "axilite_master_dev", "axi4lite_master_dev")
+
+verilated_dir = os.path.dirname(verilated_header)
+
+env.Append(CPPPATH=[verilated_dir])
+env.Append(CPPPATH=env['VERILATOR_ROOT'] + '/include')
+
+obj_sc = env.Object(src_sc)
+
+env.Depends(obj_sc, verilated_header)
+
+deps.append(File(verilated_o))
+deps.append(File(verilated_obj))
+
+bin = env.Program('gem5.sc', src + src_sc + deps)
+
+Return('bin')

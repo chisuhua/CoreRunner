@@ -1,0 +1,8 @@
+Import('*')
+
+main.Append(CPPPATH=Dir('.'))
+#main.Prepend(CPPPATH=Dir('.'))
+#env.Append(CPPPATH=Dir('.'))
+#
+#main.Append(LIBS=['cmdio_api'])
+#main.Append(LIBPATH=[Dir('/mnt/d/source/github/sim/mixlang/build/lib')])
