@@ -127,17 +127,19 @@ void verify_loop_inst(int loop_count, int largebase) {
   count_t start_instret;
   count_t end_instret;
   if (largebase == 100) {
-    // start_instret = read_instret_start();
-    start_instret = read_cycle_start();
+    start_instret = read_instret_start();
+    //start_instret = read_cycle_start();
     loop100inst(loop_count);
-    end_instret = read_cycle_end();
+    end_instret = read_instret_end();
+    //end_instret = read_cycle_end();
     qTrace_UnsignedDecimal(loop_count);
     qTrace_UnsignedDecimal(loop_count*100);
   } else {
-    //start_instret = read_instret_start();
-    start_instret = read_cycle_start();
+    start_instret = read_instret_start();
+    //start_instret = read_cycle_start();
     loop10inst(loop_count);
-    end_instret = read_cycle_end();
+    end_instret = read_instret_end();
+    //end_instret = read_cycle_end();
     qTrace_UnsignedDecimal(loop_count);
     qTrace_UnsignedDecimal(loop_count*10);
   }
@@ -153,7 +155,6 @@ void main() {
   // uart_puts("Hello world\n");
 
   qTrace_Set_OutputFcn(putUART1);
-
   verify_loop_inst(1, 10);
   verify_loop_inst(10, 10);
   verify_loop_inst(100, 10);
@@ -163,7 +164,6 @@ void main() {
   verify_loop_inst(10, 100);
   verify_loop_inst(100, 100);
   verify_loop_inst(1000, 100);
-
   static qUINT32_t Counter = 0;
   while(1) {
     Counter++;

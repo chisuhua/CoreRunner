@@ -5,7 +5,7 @@
 #define dbg(fmt, ...) printf(fmt, ##__VA_ARGS__);
 #endif
 
-#define qNotifyTask(task, data) qTask_Notification(&task, data);
+#define NotifyTask(task, data) qTask_Notification(&task, data);
 //#define qNotifyTask(task, data) qTask_Notification_Queue(&task, data);
 
 
@@ -60,10 +60,10 @@ typedef struct {
 typedef struct {
   Buffer buffer;
   Dim3 data[BufferDepth];
-} TraverseBuffer;
+} GridWalkBuffer;
 
 typedef struct {
-  Dim3 cta_id;
+  Dim3 block_id;
 } AllocReq;
 
 typedef struct {
@@ -74,7 +74,7 @@ typedef struct {
 typedef struct {
   int disp_id;
   Dim3 block_id;
-  int cta_id;
+  int tb_id;
   int smem_base;
   int vreg_num;
   int sreg_num;
@@ -83,7 +83,7 @@ typedef struct {
   int warps_mask_pe2
   int warps_mask_pe1
   int warps_mask_pe0
-} CtaDispInfo;
+} TbDispInfo;
 
 typedef struct {
   Buffer buffer;

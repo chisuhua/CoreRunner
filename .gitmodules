@@ -10,3 +10,6 @@
 [submodule "SystemRunner"]
 	path = SystemRunner
 	url = git@github.com:chisuhua/SystemRunner.git
+[submodule "zpoline"]
+	path = zpoline
+	url = git@github.com:chisuhua/zpoline.git

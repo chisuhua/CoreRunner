@@ -40,7 +40,7 @@
     #define Q_USE_STDINT_H              ( 1 )       /**< Use the stdint.h header to define kernel data-types */
     #define Q_ALLOW_TASK_NAMING         ( 1 )       /**< Tag and locate tasks by using a name string*/
     #define Q_ALLOW_YIELD_TO_TASK       ( 1 )       /**< Allows you to transfer the current CPU usage to another task without having to wait for another cycle of the scheduler*/
-    #define Q_TRACE_KERNEL_AND_MODULES  ( 0 )       /**< Experimental*/
+    #define Q_TRACE_KERNEL_AND_MODULES  ( 1 )       /**< Experimental*/
  
     /*================================================================================================================================*/  
 #endif
