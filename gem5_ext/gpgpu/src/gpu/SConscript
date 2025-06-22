@@ -30,11 +30,12 @@
 Import('*')
 
 
-SimObject('ShaderLSQ.py')
-SimObject('ShaderTLB.py')
-SimObject('GPUCopyEngine.py')
-SimObject('ShaderMMU.py')
-SimObject('CommandProcessor.py')
+SimObject('ShaderLSQ.py', sim_objects=['ShaderLSQ'])
+SimObject('ShaderTLB.py', sim_objects=['ShaderTLB'])
+
+SimObject('GPUCopyEngine.py', sim_objects=['GPUCopyEngine'])
+SimObject('ShaderMMU.py', sim_objects=['ShaderMMU'])
+SimObject('CommandProcessor.py', sim_objects=['CommandProcessor'])
 
 Source('atomic_operations.cc')
 Source('copy_engine.cc', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})

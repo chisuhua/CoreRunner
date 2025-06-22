@@ -29,12 +29,12 @@
 #ifndef __GPU_SYSCALL_HELPER_HH__
 #define __GPU_SYSCALL_HELPER_HH__
 
-#include "arch/isa.hh"
+//#include "arch/isa.hh"
 #include "base/types.hh"
 #include "cpu/thread_context.hh"
 
 using namespace gem5;
-
+/*
 #if THE_ISA == ARM_ISA
     // Currently supports 32-bit ARM platform
     #define __POINTER_SIZE__ 4
@@ -59,6 +59,7 @@ using namespace gem5;
 #else
     #error Currently gem5-gpu is only known to support x86 and ARM
 #endif
+*/
 
 typedef struct gpucall {
     int total_bytes;

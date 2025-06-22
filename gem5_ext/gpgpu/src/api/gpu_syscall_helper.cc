@@ -39,7 +39,6 @@ GPUSyscallHelper::GPUSyscallHelper(ThreadContext *_tc, gpusyscall_t* _call_param
     : tc(_tc), sim_params_ptr((Addr)_call_params), arg_lengths(NULL),
       args(NULL), total_bytes(0), live_param(NULL)
 {
-    sim_params_ptr = sim_params_ptr & __POINTER_MASK__;
     if (!sim_params_ptr)
         return;
     decode_package();
@@ -48,25 +47,26 @@ GPUSyscallHelper::GPUSyscallHelper(ThreadContext *_tc, gpusyscall_t* _call_param
 void
 GPUSyscallHelper::readBlob(Addr addr, uint8_t* p, int size, ThreadContext *tc)
 {
-    assert(addr == (addr & __POINTER_MASK__));
-
     if (FullSystem) {
-        tc->getVirtProxy().readBlob(addr, p, size);
+        assert(false);
+        // tc->getVirtProxy().readBlob(addr, p, size);
     } else {
+        SETranslatingPortProxy p(tc);
+        p.readBlob(addr, p, size);
         // TODO schi for gem5-gpu tc->getMemProxy().readBlob(addr, p, size);
+        /*
         if (tc->getSystemPtr()) {
             tc->getVirtProxy().readBlob(addr, p, size);
         } else {
             memcpy((void*)p, (void*)addr, size);
         }
+        */
     }
 }
 
 void
 GPUSyscallHelper::readString(Addr addr, uint8_t* p, int size, ThreadContext *tc)
 {
-    assert(addr == (addr & __POINTER_MASK__));
-
     // Ensure that the memory buffer is cleared
     memset(p, 0, size);
 
@@ -75,7 +75,7 @@ GPUSyscallHelper::readString(Addr addr, uint8_t* p, int size, ThreadContext *tc)
     bool null_not_found = true;
     Addr curr_addr;
     int read_size;
-    unsigned block_size = ruby::RubySystem::getBlockSizeBytes();
+    unsigned block_size = 128; // TODO schi ruby::RubySystem::getBlockSizeBytes();
     int bytes_read = 0;
     for (; bytes_read < size && null_not_found; bytes_read += read_size) {
         curr_addr = addr + bytes_read;
@@ -94,19 +94,20 @@ GPUSyscallHelper::readString(Addr addr, uint8_t* p, int size, ThreadContext *tc)
 void
 GPUSyscallHelper::writeBlob(Addr addr, uint8_t* p, int size, ThreadContext *tc, bool is_ptr)
 {
-    assert(addr == (addr & __POINTER_MASK__));
-
-    if (is_ptr)
-        size = __POINTER_SIZE__;
     if (FullSystem) {
-        tc->getVirtProxy().writeBlob(addr, p, size);
+        assert(false);
+        //tc->getVirtProxy().writeBlob(addr, p, size);
     } else {
+        SETranslatingPortProxy p(tc);
+        p.writeBlob(addr, p, size);
         // TODO schi for gem5 tc->getMemProxy().writeBlob(addr, p, size);
+        /*
         if (tc->getSystemPtr()) {
             tc->getVirtProxy().writeBlob(addr, p, size);
         } else {
             memcpy((void*)addr, (void*)p, size);
         }
+        */
     }
 }
 
@@ -114,7 +115,7 @@ void
 GPUSyscallHelper::decode_package()
 {
     assert(sim_params_ptr);
-
+/*
 #if THE_ISA == ARM_ISA
     // Size of sim_params in 32-bit simulated system is 20B
     #define SIM_PARAMS_SIZE 20 // 4B each for 5 members of gpusyscall_t
@@ -127,11 +128,9 @@ GPUSyscallHelper::decode_package()
     sim_params.args = unpackPointer<Addr>(params_package, 12);
     sim_params.ret = unpackPointer<Addr>(params_package, 16);
 #elif THE_ISA == X86_ISA
+*/
     // NOTE: sizeof() call assumes gem5-gpu built on 64-bit machine
     readBlob(sim_params_ptr, (unsigned char*)&sim_params, sizeof(gpusyscall_t));
-#else
-    #error Currently gem5-gpu is only known to support x86 and ARM
-#endif
 
     arg_lengths = new int[sim_params.num_args];
     readBlob(sim_params.arg_lengths, (unsigned char*)arg_lengths, sim_params.num_args * sizeof(int));

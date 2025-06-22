@@ -581,33 +581,20 @@ CudaCore *CudaCoreParams::create() const {
     return new CudaCore(*this);
 }
 */
-
 void
-CudaCore::regStats()
-{
-    ClockedObject::regStats();
-    using namespace Stats;
-
-    numLocalLoads
-        .name(name() + ".local_loads")
-        .desc("Number of loads from local space")
-        ;
-    numLocalStores
-        .name(name() + ".local_stores")
-        .desc("Number of stores to local space")
-        ;
-    numSharedLoads
-        .name(name() + ".shared_loads")
-        .desc("Number of loads from shared space")
-        ;
-    numSharedStores
-        .name(name() + ".shared_stores")
-        .desc("Number of stores to shared space")
-        ;
-    numParamKernelLoads
-        .name(name() + ".param_kernel_loads")
-        .desc("Number of loads from kernel parameter space")
-        ;
+CudaCore::WarpStats::WarpStats(statistics::Group *parent)
+    : statistics::Group(parent),
+    ADD_STAT(numLocalLoads,
+        "Number of loads from local space"),
+    ADD_STAT(numLocalStores,
+        "Number of stores to local space"),
+    ADD_STAT(numSharedLoads,
+        "Number of loads from shared space"),
+    ADD_STAT(numSharedStores,
+        "Number of stores to shared space"),
+    ADD_STAT(numParamKernelLoads,
+        "Number of loads from kernel parameter space")
+/*
     numParamLocalLoads
         .name(name() + ".param_local_loads")
         .desc("Number of loads from local parameter space")
@@ -674,13 +661,22 @@ CudaCore::regStats()
         .name(name() + ".instPerCycle")
         .desc("Instruction instances per cycle")
         ;
+*/
+{}
 
+
+void
+CudaCore::WarpStats::regStats()
+{
+    statistics::Group::regStats();
+
+/*
     instPerCycle = instInstances / activeCycles;
     numKernelsCompleted
         .name(name() + ".kernels_completed")
         .desc("Number of kernels completed")
         ;
-
+*/
     itb->regStats();
 }
 

@@ -31,10 +31,14 @@
 
 Import('*')
 
-sticky_vars.AddVariables(
+import os
+
+gpgpu_sim_vars = Variables()
+gpgpu_sim_vars.AddVariables(
     BoolVariable('GPGPU_SIM', "Simulate a GPGPU using GPGPU-sim",
                  False),
     )
+gpgpu_sim_vars.Update(main)
 
-export_vars += [ 'GPGPU_SIM' ]
+#export_vars += [ 'GPGPU_SIM' ]
 

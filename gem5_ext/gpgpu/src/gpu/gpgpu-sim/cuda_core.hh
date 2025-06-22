@@ -319,32 +319,36 @@ class CudaCore : public ClockedObject
      */
     void finishKernel();
 
-    // For counting statistics
-    Stats::Scalar numLocalLoads;
-    Stats::Scalar numLocalStores;
-    Stats::Scalar numSharedLoads;
-    Stats::Scalar numSharedStores;
-    Stats::Scalar numParamKernelLoads;
-    Stats::Scalar numParamLocalLoads;
-    Stats::Scalar numParamLocalStores;
-    Stats::Scalar numConstLoads;
-    Stats::Scalar numTexLoads;
-    Stats::Scalar numGlobalLoads;
-    Stats::Scalar numGlobalStores;
-    Stats::Scalar numSurfLoads;
-    Stats::Scalar numGenericLoads;
-    Stats::Scalar numGenericStores;
-    Stats::Scalar numDataCacheRequests;
-    Stats::Scalar numDataCacheRetry;
-    Stats::Scalar numInstCacheRequests;
-    Stats::Scalar numInstCacheRetry;
-    Stats::Vector instCounts;
-    Stats::Scalar activeCycles;
-    Stats::Scalar notStalledCycles;
-    Stats::Scalar instInstances;
-    Stats::Formula instPerCycle;
-    Stats::Scalar numKernelsCompleted;
-    void regStats();
+    struct WarpStats : public statistics::Group
+    {
+        WarpStats(statistics::Group *parent);
+        // For counting statistics
+        statistics::Scalar numLocalLoads;
+        statistics::Scalar numLocalStores;
+        statistics::Scalar numSharedLoads;
+        statistics::Scalar numSharedStores;
+        statistics::Scalar numParamKernelLoads;
+        statistics::Scalar numParamLocalLoads;
+        statistics::Scalar numParamLocalStores;
+        statistics::Scalar numConstLoads;
+        statistics::Scalar numTexLoads;
+        statistics::Scalar numGlobalLoads;
+        statistics::Scalar numGlobalStores;
+        statistics::Scalar numSurfLoads;
+        statistics::Scalar numGenericLoads;
+        statistics::Scalar numGenericStores;
+        statistics::Scalar numDataCacheRequests;
+        statistics::Scalar numDataCacheRetry;
+        statistics::Scalar numInstCacheRequests;
+        statistics::Scalar numInstCacheRetry;
+        statistics::Vector instCounts;
+        statistics::Scalar activeCycles;
+        statistics::Scalar notStalledCycles;
+        statistics::Scalar instInstances;
+        statistics::Formula instPerCycle;
+        statistics::Scalar numKernelsCompleted;
+        void regStats() override;
+    } stats;
 
     void record_ld(memory_space_t space);
     void record_st(memory_space_t space);

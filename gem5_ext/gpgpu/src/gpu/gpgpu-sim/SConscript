@@ -30,8 +30,8 @@
 Import('*')
 
 
-SimObject('CudaCore.py')
-SimObject('CudaGPU.py')
+SimObject('CudaCore.py', sim_objects=['CudaCore'])
+SimObject('CudaGPU.py', sim_objects=['CudaGPU', 'GPGPUSimComponentWrapper'])
 
 Source('cuda_core.cc', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
 Source('cuda_gpu.cc', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})

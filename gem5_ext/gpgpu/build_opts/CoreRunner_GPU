@@ -1,0 +1,19 @@
+#TARGET_ISA = 'x86'
+#CPU_MODELS = 'AtomicSimpleCPU,O3CPU,TimingSimpleCPU'
+#PROTOCOL = 'VI_hammer'
+#PROTOCOL = 'MSI'
+#EXTRAS = '../gem5-gpu/src:../gpgpu-sim/'
+#EXTRAS = 'design/gpgpu'
+GPGPU_SIM = False
+RUBY=y
+PROTOCOL="GPU_VIPER"
+RUBY_PROTOCOL_GPU_VIPER=y
+#RUBY_PROTOCOL_MI_example=y
+BUILD_ISA=y
+USE_RISCV_ISA=y
+USE_ARM_ISA=y
+USE_X86_ISA=y
+VEGA_GPU_ISA=y
+BUILD_GPU=y
+NUMBER_BITS_PER_SET=128
+

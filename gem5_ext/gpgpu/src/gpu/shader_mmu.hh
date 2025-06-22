@@ -37,7 +37,7 @@
 #include <set>
 
 #include "arch/generic/tlb.hh"
-#include "arch/tlb.hh"
+//#include "arch/tlb.hh"
 #include "base/statistics.hh"
 #include "debug/ShaderMMU.hh"
 #include "gpu/shader_tlb.hh"
@@ -49,19 +49,21 @@ namespace gem5 {
 class ShaderMMU : public ClockedObject
 {
 private:
-    std::vector<TheISA::TLB*> pagewalkers;
-    std::map<TheISA::TLB*, unsigned> pagewalkerIndices;
+    std::vector<BaseTLB*> pagewalkers;
+    std::map<BaseTLB*, unsigned> pagewalkerIndices;
     std::vector<bool> activeWalkers;
+/*
 #if THE_ISA == ARM_ISA
     TheISA::Stage2MMU *stage2MMU;
 #endif
+*/
 
     class TranslationRequest : public BaseMMU::Translation
     {
     public:
         ShaderMMU *mmu;
         ShaderTLB *origTLB;
-        TheISA::TLB *pageWalker;
+        BaseTLB *pageWalker;
         BaseMMU::Translation *wrappedTranslation;
         RequestPtr req;
         BaseMMU::Mode mode;
@@ -189,9 +191,9 @@ private:
     /// Handle a page fault from a shader TLB
     void handlePageFault(TranslationRequest *translation);
 
-    void setWalkerFree(TheISA::TLB *walker);
-    TheISA::TLB *getFreeWalker();
-    void schedulePagewalk(TheISA::TLB *walker, TranslationRequest *translation)
+    void setWalkerFree(BaseTLB *walker);
+    BaseTLB *getFreeWalker();
+    void schedulePagewalk(BaseTLB *walker, TranslationRequest *translation)
     {
         // Start the page walk in the next cycle
         unsigned pw_id = pagewalkerIndices[walker];
@@ -223,7 +225,7 @@ public:
                       RequestPtr req, BaseMMU::Mode mode, ThreadContext *tc);
 
     /// Called from a start pagewalk event
-    void walk(TheISA::TLB *walker, TranslationRequest *translation) {
+    void walk(BaseTLB *walker, TranslationRequest *translation) {
         assert(translation->pageWalker == NULL);
         assert(walker != NULL);
         translation->beginWalk = curCycle();

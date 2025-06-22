@@ -30,14 +30,14 @@
 
 #include <list>
 
-#include "arch/isa.hh"
+//'#include "arch/isa.hh"
 #include "cpu/base.hh"
 #include "debug/ShaderMMU.hh"
 #include "gpu/gpgpu-sim/cuda_gpu.hh"
 #include "gpu/shader_mmu.hh"
 #include "params/ShaderMMU.hh"
 #include "sim/full_system.hh"
-
+/*
 #if THE_ISA == ARM_ISA
     // TODO: To enable full-system mode ARM interrupts may require including
     // an ARM instruction with a GPU interrupt handler
@@ -47,17 +47,20 @@
 #else
     #error Currently gem5-gpu is only known to support x86 and ARM
 #endif
+*/
 
 using namespace std;
-using namespace TheISA;
+//using namespace TheISA;
 
 namespace gem5 {
 
 ShaderMMU::ShaderMMU(const ShaderMMUParams &p) :
     ClockedObject(p), pagewalkers(p.pagewalkers),
+    /*
 #if THE_ISA == ARM_ISA
     stage2MMU(p.stage2_mmu),
 #endif
+*/
     latency(p.latency), startMissEvent(this), faultTimeoutEvent(this),
     faultTimeoutCycles(1000000), outstandingFaultStatus(None),
     outstandingFaultInfo(NULL), curOutstandingWalks(0),
@@ -73,12 +76,14 @@ ShaderMMU::ShaderMMU(const ShaderMMUParams &p) :
     pagewalkEvents.resize(pagewalkers.size());
     for (unsigned pw_id = 0; pw_id < pagewalkers.size(); pw_id++) {
         activeWalkers[pw_id] = false;
-        TheISA::TLB* pw = pagewalkers[pw_id];
+        BaseTLB* pw = pagewalkers[pw_id];
         pagewalkerIndices[pw] = pw_id;
         pagewalkEvents[pw_id] = new StartPagewalkEvent(this, pw);
+/*
 #if THE_ISA == ARM_ISA
         pw->setMMU(stage2MMU, pw_id);
 #endif
+*/
     }
 }
 
@@ -126,7 +131,7 @@ ShaderMMU::handleTLBMiss()
     ThreadContext *tc = translation_request->tc;
 
     Addr pp_base;
-    Addr offset = req->getVaddr() % TheISA::PageBytes;
+    Addr offset = req->getVaddr() % X86ISA::PageBytes;
     Addr vp_base = req->getVaddr() - offset;
 
     // Check the L2 TLB
@@ -247,7 +252,7 @@ ShaderMMU::finalizeTranslation(TranslationRequest *translation)
 {
     RequestPtr req = translation->req;
     Addr vp_base = translation->vpBase;
-    Addr pp_base = req->getPaddr() - req->getPaddr() % TheISA::PageBytes;
+    Addr pp_base = req->getPaddr() - req->getPaddr() % X86ISA::PageBytes;
 
     DPRINTF(ShaderMMU, "Walk complete for VP %#x to PP %#x\n", vp_base, pp_base);
 
@@ -285,7 +290,7 @@ ShaderMMU::finalizeTranslation(TranslationRequest *translation)
         assert(t != translation);
 
         // Set the physical address to complete the translation
-        Addr offset = t->req->getVaddr() % TheISA::PageBytes;
+        Addr offset = t->req->getVaddr() % X86ISA::PageBytes;
         t->req->setPaddr(pp_base + offset);
 
         // Insert into L1 TLB
@@ -584,7 +589,7 @@ ShaderMMU::tryPrefetch(Addr vp_base, ThreadContext *tc)
         return;
     }
 
-    Addr next_vp_base = vp_base + TheISA::PageBytes;
+    Addr next_vp_base = vp_base + X86ISA::PageBytes;
     Addr pp_base;
     if (tlb && tlb->lookup(next_vp_base, pp_base, false)) {
         // This vp already in the TLB, no need to prefetch
@@ -615,7 +620,7 @@ void
 ShaderMMU::insertPrefetch(Addr vp_base, Addr pp_base)
 {
     DPRINTF(ShaderMMU, "Inserting %#x->%#x into pf buffer\n", vp_base, pp_base);
-    assert(vp_base % TheISA::PageBytes == 0);
+    assert(vp_base % X86ISA::PageBytes == 0);
     // Insert into prefetch buffer
     if (prefetchBuffer.size() >= prefetchBufferSize) {
         // evict unused entry from prefetch buffer
@@ -701,7 +706,7 @@ ShaderMMU::TranslationRequest::TranslationRequest(ShaderMMU *_mmu,
               beginFault(0), beginWalk(0), startTick(start_tick),
               prefetch(prefetch)
 {
-    vpBase = req->getVaddr() - req->getVaddr() % TheISA::PageBytes;
+    vpBase = req->getVaddr() - req->getVaddr() % X86ISA::PageBytes;
 }
 
 /*

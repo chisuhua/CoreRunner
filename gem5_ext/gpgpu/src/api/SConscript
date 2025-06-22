@@ -1,7 +1,8 @@
 Import('*')
 Import('main')
 
-if env['TARGET_ISA'] != 'no':
+#if env['TARGET_ISA'] != 'no':
+if True:
     Source('gpu_syscall_helper.cc')
     #Source('cuda_syscalls.cc', Werror=False)
     #Source('cuda_syscalls.cc', append={'CXXFLAGS': '-Wno-error=pointer-arith -Wno-error=unused-variable -Wno-error=type-limits'})

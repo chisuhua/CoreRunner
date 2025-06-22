@@ -267,11 +267,15 @@ private:
 
     void recvRetry();
 
-    Stats::Scalar numOperations;
-    Stats::Scalar bytesRead;
-    Stats::Scalar bytesWritten;
-    Stats::Scalar operationTimeTicks;
-    void regStats();
+    struct CPStats : public statistics::Group
+    {
+        CPStats(statistics::Group *parent);
+        statistics::Scalar numOperations;
+        statistics::Scalar bytesRead;
+        statistics::Scalar bytesWritten;
+        statistics::Scalar operationTimeTicks;
+        void regStats();
+    }
 
 };
 }

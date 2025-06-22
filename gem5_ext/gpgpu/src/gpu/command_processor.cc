@@ -748,27 +748,21 @@ CommandProcessor::memAccess( bool cmd_read, uint32_t data, bool uncacheable, Add
 }
 #endif
 
-void CommandProcessor::regStats() {
+void CommandProcessor::CPStats::CPStats(statistics::Group *parent) 
+    : statistics::Group(parent),
+    ADD_STAT(numOperations,
+        "Number of copy/memset operations"),
+    ADD_STAT(bytesRead,
+        "Number of copy bytes read"),
+    ADD_STAT(bytesWritten,
+        "Number of copy/memset bytes written"),
+    ADD_STAT(operationTimeTicks,
+        "Total time spent in copy/memset operations")
+{}
 
-    ClockedObject::regStats();
-    using namespace Stats;
+void CommandProcessor::CPStats::regStats() {
 
-    numOperations
-        .name(name() + ".numOperations")
-        .desc("Number of copy/memset operations")
-        ;
-    bytesRead
-        .name(name() + ".opBytesRead")
-        .desc("Number of copy bytes read")
-        ;
-    bytesWritten
-        .name(name() + ".opBytesWritten")
-        .desc("Number of copy/memset bytes written")
-        ;
-    operationTimeTicks
-        .name(name() + ".opTimeTicks")
-        .desc("Total time spent in copy/memset operations")
-        ;
+    statistics::Group::regStats();
 
     if (hostDTB) { hostDTB->regStats(); }
     if (deviceDTB) { deviceDTB->regStats(); }

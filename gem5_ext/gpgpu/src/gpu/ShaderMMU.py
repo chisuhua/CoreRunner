@@ -38,10 +38,10 @@ class ShaderMMU(ClockedObject):
     cxx_class = 'gem5::ShaderMMU'
     cxx_header = "gpu/shader_mmu.hh"
 
-    if buildEnv['TARGET_ISA'] == 'x86':
+    if buildEnv["USE_X86_ISA"]:
         from m5.objects.X86TLB import X86TLB
         pagewalkers = VectorParam.X86TLB("wrapped TLB")
-    elif buildEnv['TARGET_ISA'] == 'arm':
+    elif buildEnv['USE_ARM_ISA']:
         from m5.objects.ArmTLB import ArmTLB
         pagewalkers = VectorParam.ArmTLB("wrapped TLB")
         stage2_mmu = Param.ArmStage2MMU("Stage 2 MMU for port")
