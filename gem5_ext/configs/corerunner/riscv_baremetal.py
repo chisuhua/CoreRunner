@@ -1,98 +1,67 @@
-from m5.objects import *
-from gem5.components.boards.riscv_board import RiscvBoard
-from gem5.components.cachehierarchies.classic.no_cache import NoCache
-from gem5.components.processors.simple_processor import SimpleProcessor
-from gem5.components.processors.cpu_types import CPUTypes 
-from gem5.isas import ISA
-from gem5.components.memory import SingleChannelDDR3_1600
-from gem5.simulate.simulator import Simulator
-from gem5.resources.resource import BinaryResource
+import m5
+import os
 import argparse
+from m5.objects import *
 
-parser = argparse.ArgumentParser(description='A simple system with 2-level cache.')
-parser.add_argument("binary", default="tests/test-progs/hello/bin/riscv/linux/hello", nargs="?", type=str,
-                    help="Path to the binary to execute.")
+# 解析命令行参数
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+)
+parser.add_argument("--cores", type=int, default=2, help="Number of CPUs")
+parser.add_argument("-g", "--gdb", action="store_true", help="Wait for GDB connection")
+args = parser.parse_args()
 
-options = parser.parse_args()
-
+# 定义 ELF 文件路径
 thispath = os.path.dirname(os.path.realpath(__file__))
-binary = os.path.join(
-    thispath,
-    "../../../",
-    "build/quarks/kernel.elf",
-)
+binary = os.path.join(thispath, "../../../build/quarks/kernel.elf")
 
-# 配置内存
-#memory = SimpleMemory(
-#    size="64MB",
-#    read_latency="1ns",
-#    write_latency="1ns"
-#)
-#memory = SingleChannelDDR3_1600()
-
-# 配置 CPU
-processor = SimpleProcessor(
-    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=1
-)
-
-# 配置缓存（无缓存）
-cache_hierarchy = NoCache()
-
-# 构建 Board
-#board = RiscvBoard(
-#    clk_freq="2GHz",
-#    processor=processor,
-#    memory=memory,
-#    cache_hierarchy=cache_hierarchy
-#)
-
-# 设置工作负载（启动地址 0x80000000）
-#board.set_se_binary_workload(
-#    binary_path=options.binary
-#)
-#board.workload = RiscvBareMetal()
-#board.workload.bootloader=options.binary
-#board._set_fullsystem(True)
-#board._bootloader=options.binary
-#board.set_kernel_disk_workload(
-#    kernel=BinaryResource(local_path=options.binary),
-#    disk_image=options.binary
-#)
-
-#range_start=0x80000000
-range_start=0x00000000
-
+# 创建系统对象
 system = System()
-system.clk_domain = SrcClockDomain()
-system.clk_domain.clock = '1GHz'
-system.clk_domain.voltage_domain = VoltageDomain()
+system.clk_domain = SrcClockDomain(clock='1GHz', voltage_domain=VoltageDomain())
 system.mem_mode = 'timing'
-system.mem_ranges = [AddrRange(start=range_start, size='1GiB')]
+system.mem_ranges = [AddrRange('512MB')]
+
+# 创建互连总线
 system.membus = SystemXBar()
 
-#system.cpu = SimpleProcessor(
-#    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=1
-#)
-system.cpu = RiscvTimingSimpleCPU()
-system.cpu.createInterruptController()
-system.cpu.icache_port = system.membus.cpu_side_ports
-system.cpu.dcache_port = system.membus.cpu_side_ports
+# 创建多个 CPU Core
+system.cpus = [RiscvTimingSimpleCPU() for _ in range(args.cores)]
+process = Process()
+process.cmd = [binary]
 
-system.workload = RiscvBareMetal()
-system.workload.bootloader = binary
 
-system.ram = SimpleMemory(
-        #image_file=binary,
-        #range=AddrRange(0x80000000, size="8MiB"),
-    )
+# 为每个 CPU 设置 hart_id、中断控制器、缓存端口
+for i, cpu in enumerate(system.cpus):
+    cpu.numThreads = 1
+    cpu.createInterruptController()
+    cpu.icache_port = system.membus.cpu_side_ports
+    cpu.dcache_port = system.membus.cpu_side_ports
 
+for i, cpu in enumerate(system.cpus):
+    cpu.workload = process
+    cpu.createThreads()
+    cpu.isa[0].riscv_type = "RV32"
+    cpu.isa[0].enable_rvv = False
+
+# 添加内存控制器
+system.ram = SimpleMemory()
 system.ram.port = system.membus.mem_side_ports
 
-system.cpu.createThreads()
+# 系统级端口（用于加载程序等）
 system.system_port = system.membus.cpu_side_ports
 
-root = Root(full_system = True, system = system)
-m5.instantiate()
-exit_event = m5.simulate()
-print('Exiting @ tick {} because {}' .format(m5.curTick(), exit_event.getCause()))
+# 创建工作负载（共享同一个 ELF）
+system.workload = SEWorkload.init_compatible(binary)
+if args.gdb:
+    system.workload.wait_for_remote_gdb = True
+else:
+    system.workload.wait_for_remote_gdb = False
 
+
+# 根对象与实例化
+root = Root(full_system=False, system=system)
+m5.instantiate()
+
+print("Beginning simulation!")
+exit_event = m5.simulate()
+print(f"Exiting @ tick {m5.curTick()} because {exit_event.getCause()}")

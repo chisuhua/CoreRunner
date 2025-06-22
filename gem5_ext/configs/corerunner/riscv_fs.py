@@ -10,11 +10,23 @@ from gem5.resources.resource import BinaryResource
 import argparse
 import os
 
-parser = argparse.ArgumentParser(description='A simple system with 2-level cache.')
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+)
+
 parser.add_argument("binary", default="tests/test-progs/hello/bin/riscv/linux/hello", nargs="?", type=str,
                     help="Path to the binary to execute.")
+parser.add_argument(
+    "-g", "--gdb", action="store_true", help="Use atomic (non-timing) mode"
+)
 
-options = parser.parse_args()
+parser.add_argument(
+    "-c", "--cores", default=1, type=int, help="Use atomic (non-timing) mode"
+)
+
+
+
+args = parser.parse_args()
 
 thispath = os.path.dirname(os.path.realpath(__file__))
 binary = os.path.join(
@@ -32,18 +44,15 @@ binary = os.path.join(
 #)
 memory = SingleChannelDDR3_1600()
 
-#memory = SimpleMemory()
-#memory = SimpleMemory(
-#    range=AddrRange(0x80000000, size="8MiB"),
-#)
-
 # 配置 CPU
 processor = SimpleProcessor(
-    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=1
+    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=args.cores
 )
 
-processor.cores[0].core.isa[0].enable_rvv = False
-processor.cores[0].core.isa[0].riscv_type = "RV32"
+for i,cpu in enumerate(processor.cores):
+    cpu.core.isa[i].enable_rvv = False
+    cpu.core.isa[i].riscv_type = "RV32"
+    cpu.core.hard_id = i
 
 # 配置缓存（无缓存）
 cache_hierarchy = NoCache()
@@ -61,10 +70,11 @@ board.set_se_binary_workload(
     binary=BinaryResource(local_path=binary)
 )
 
-#board.set_kernel_disk_workload(
-#   kernel=BinaryResource(local_path=options.binary),
-#   disk_image=options.binary
-#
+if args.gdb:
+    board.workload.wait_for_remote_gdb = True
+else:
+    board.workload.wait_for_remote_gdb = False
+
 # 运行仿真
 simulator = Simulator(board=board)
 print("开始运行 gem5 仿真...")
