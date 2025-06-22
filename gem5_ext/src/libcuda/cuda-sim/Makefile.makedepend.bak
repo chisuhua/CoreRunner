@@ -1,0 +1,226 @@
+# DO NOT DELETE
+
+./cuda-sim.o: cuda-sim.h ../option.h /usr/include/stdio.h
+./cuda-sim.o: /usr/include/stdlib.h ptx_sim.h ../tr1_hash_map.h half.h
+./cuda-sim.o: /usr/include/assert.h /usr/include/features.h
+./cuda-sim.o: /usr/include/features-time64.h /usr/include/stdc-predef.h
+./cuda-sim.o: opcodes.h opcodes.def memory.h /usr/include/string.h
+./cuda-sim.o: /usr/include/strings.h instructions.h ptx_ir.h
+./cuda-sim.o: ../../opu/coasm/coasm_define.h ../../libcuda/gpgpu_context.h
+./cuda-sim.o: ../../libcuda/cuda-sim/cuda-sim.h
+./cuda-sim.o: ../../libcuda/cuda-sim/cuda_device_runtime.h
+./cuda-sim.o: ../../libcuda/cuda-sim/ptx-stats.h
+./cuda-sim.o: ../../libcuda/cuda-sim/ptx_loader.h
+./cuda-sim.o: ../../libcuda/cuda-sim/ptx_parser.h
+./cuda-sim.o: ../../libcuda/gpgpusim_entrypoint.h /usr/include/pthread.h
+./cuda-sim.o: /usr/include/sched.h /usr/include/time.h
+./cuda-sim.o: /usr/include/semaphore.h
+./cuda-sim.o: ../../libcuda/abstract_hardware_model.h
+./cuda-sim.o: ../../libcuda/cuda_api_object.h
+./cuda-sim.o: ../../libcuda/abstract_hardware_model.h
+./cuda-sim.o: ../../libcuda/cuda-sim/ptx_ir.h ../../libcuda/gpu-sim.h
+./cuda-sim.o: ../../libcuda/option.h ../../libcuda/shader.h
+./cuda-sim.o: /usr/include/math.h ../../libcuda/stats.h
+./cuda-sim.o: ../../libcuda/addrdec.h ../../libcuda/option.h
+./cuda-sim.o: ../../libcuda/tr1_hash_map.h ../../libcuda/cuobjdump.h
+./cuda-sim.o: ../../libcuda/CUctx.h ../stream_manager.h cuda_device_runtime.h
+./cuda-sim.o: decuda_pred_table/decuda_pred_table.h ptx-stats.h ptx.tab.h
+./cuda-sim.o: ptx_loader.h ptx_parser.h
+./cuda_device_printf.o: cuda_device_printf.h ptx_ir.h
+./cuda_device_printf.o: ../../opu/coasm/coasm_define.h /usr/include/assert.h
+./cuda_device_printf.o: /usr/include/features.h
+./cuda_device_printf.o: /usr/include/features-time64.h
+./cuda_device_printf.o: /usr/include/stdc-predef.h ptx_sim.h
+./cuda_device_printf.o: /usr/include/stdlib.h ../tr1_hash_map.h half.h
+./cuda_device_printf.o: opcodes.h opcodes.def memory.h /usr/include/stdio.h
+./cuda_device_printf.o: /usr/include/string.h /usr/include/strings.h
+./cuda_device_printf.o: ../option.h
+./instructions.o: instructions.h ptx_ir.h ../../opu/coasm/coasm_define.h
+./instructions.o: /usr/include/assert.h /usr/include/features.h
+./instructions.o: /usr/include/features-time64.h /usr/include/stdc-predef.h
+./instructions.o: ptx_sim.h /usr/include/stdlib.h ../tr1_hash_map.h half.h
+./instructions.o: opcodes.h opcodes.def memory.h /usr/include/stdio.h
+./instructions.o: /usr/include/string.h /usr/include/strings.h ../option.h
+./instructions.o: half.hpp /usr/include/fenv.h /usr/include/math.h
+./instructions.o: ../abstract_hardware_model.h ../gpu-sim.h
+./instructions.o: ../../libcuda/option.h
+./instructions.o: ../../libcuda/abstract_hardware_model.h
+./instructions.o: ../../libcuda/shader.h ../../libcuda/stats.h
+./instructions.o: ../../libcuda/addrdec.h ../../libcuda/option.h
+./instructions.o: ../../libcuda/tr1_hash_map.h ../shader.h cuda-math.h
+./instructions.o: cuda_device_printf.h ptx.tab.h ptx_loader.h
+./instructions.o: cuda_device_runtime.h ../../libcuda/gpgpu_context.h
+./instructions.o: ../../libcuda/cuda-sim/cuda-sim.h
+./instructions.o: ../../libcuda/cuda-sim/cuda_device_runtime.h
+./instructions.o: ../../libcuda/cuda-sim/ptx-stats.h
+./instructions.o: ../../libcuda/cuda-sim/ptx_loader.h
+./instructions.o: ../../libcuda/cuda-sim/ptx_parser.h
+./instructions.o: ../../libcuda/gpgpusim_entrypoint.h /usr/include/pthread.h
+./instructions.o: /usr/include/sched.h /usr/include/time.h
+./instructions.o: /usr/include/semaphore.h
+./instructions.o: ../../libcuda/abstract_hardware_model.h
+./instructions.o: ../../libcuda/cuda_api_object.h
+./instructions.o: ../../libcuda/cuda-sim/ptx_ir.h ../../libcuda/gpu-sim.h
+./instructions.o: ../../libcuda/cuobjdump.h ../../libcuda/CUctx.h
+./instructions_coasm.o: ptx_ir.h ../../opu/coasm/coasm_define.h
+./instructions_coasm.o: /usr/include/assert.h /usr/include/features.h
+./instructions_coasm.o: /usr/include/features-time64.h
+./instructions_coasm.o: /usr/include/stdc-predef.h ptx_sim.h
+./instructions_coasm.o: /usr/include/stdlib.h ../tr1_hash_map.h half.h
+./instructions_coasm.o: opcodes.h opcodes.def memory.h /usr/include/stdio.h
+./instructions_coasm.o: /usr/include/string.h /usr/include/strings.h
+./instructions_coasm.o: ../option.h ptx_parser.h ptx.tab.h
+./instructions_coasm.o: ../../libcuda/gpgpu_context.h
+./instructions_coasm.o: ../../libcuda/cuda-sim/cuda-sim.h
+./instructions_coasm.o: ../../libcuda/cuda-sim/cuda_device_runtime.h
+./instructions_coasm.o: ../../libcuda/cuda-sim/ptx-stats.h
+./instructions_coasm.o: ../../libcuda/cuda-sim/ptx_loader.h
+./instructions_coasm.o: ../../libcuda/cuda-sim/ptx_parser.h
+./instructions_coasm.o: ../../libcuda/gpgpusim_entrypoint.h
+./instructions_coasm.o: /usr/include/pthread.h /usr/include/sched.h
+./instructions_coasm.o: /usr/include/time.h /usr/include/semaphore.h
+./instructions_coasm.o: ../../libcuda/abstract_hardware_model.h
+./instructions_coasm.o: ../../libcuda/cuda_api_object.h
+./instructions_coasm.o: ../../libcuda/abstract_hardware_model.h
+./instructions_coasm.o: ../../libcuda/cuda-sim/ptx_ir.h
+./instructions_coasm.o: ../../libcuda/gpu-sim.h ../../libcuda/option.h
+./instructions_coasm.o: ../../libcuda/shader.h /usr/include/math.h
+./instructions_coasm.o: ../../libcuda/stats.h ../../libcuda/addrdec.h
+./instructions_coasm.o: ../../libcuda/option.h ../../libcuda/tr1_hash_map.h
+./instructions_coasm.o: ../../libcuda/cuobjdump.h ../../libcuda/CUctx.h
+./memory.o: memory.h ../tr1_hash_map.h /usr/include/assert.h
+./memory.o: /usr/include/features.h /usr/include/features-time64.h
+./memory.o: /usr/include/stdc-predef.h /usr/include/stdio.h
+./memory.o: /usr/include/stdlib.h /usr/include/string.h
+./memory.o: /usr/include/strings.h ../../libcuda/gpgpu_context.h
+./memory.o: ../../libcuda/cuda-sim/cuda-sim.h
+./memory.o: ../../libcuda/cuda-sim/cuda_device_runtime.h
+./memory.o: ../../libcuda/cuda-sim/ptx-stats.h ../option.h
+./memory.o: ../../libcuda/cuda-sim/ptx_loader.h
+./memory.o: ../../libcuda/cuda-sim/ptx_parser.h ptx_ir.h
+./memory.o: ../../opu/coasm/coasm_define.h ptx_sim.h half.h opcodes.h
+./memory.o: opcodes.def ../../libcuda/gpgpusim_entrypoint.h
+./memory.o: /usr/include/pthread.h /usr/include/sched.h /usr/include/time.h
+./memory.o: /usr/include/semaphore.h ../../libcuda/abstract_hardware_model.h
+./memory.o: ../../libcuda/cuda_api_object.h
+./memory.o: ../../libcuda/abstract_hardware_model.h
+./memory.o: ../../libcuda/cuda-sim/ptx_ir.h ../../libcuda/gpu-sim.h
+./memory.o: ../../libcuda/option.h ../../libcuda/shader.h /usr/include/math.h
+./memory.o: ../../libcuda/stats.h ../../libcuda/addrdec.h
+./memory.o: ../../libcuda/option.h ../../libcuda/tr1_hash_map.h
+./memory.o: ../../libcuda/cuobjdump.h ../../libcuda/CUctx.h ../debug.h
+./ptx-stats.o: ptx-stats.h ../option.h /usr/include/stdio.h
+./ptx-stats.o: /usr/include/stdlib.h ../../libcuda/gpgpu_context.h
+./ptx-stats.o: ../../libcuda/cuda-sim/cuda-sim.h
+./ptx-stats.o: ../../libcuda/cuda-sim/cuda_device_runtime.h
+./ptx-stats.o: ../../libcuda/cuda-sim/ptx-stats.h
+./ptx-stats.o: ../../libcuda/cuda-sim/ptx_loader.h
+./ptx-stats.o: ../../libcuda/cuda-sim/ptx_parser.h ptx_ir.h
+./ptx-stats.o: ../../opu/coasm/coasm_define.h /usr/include/assert.h
+./ptx-stats.o: /usr/include/features.h /usr/include/features-time64.h
+./ptx-stats.o: /usr/include/stdc-predef.h ptx_sim.h ../tr1_hash_map.h half.h
+./ptx-stats.o: opcodes.h opcodes.def memory.h /usr/include/string.h
+./ptx-stats.o: /usr/include/strings.h ../../libcuda/gpgpusim_entrypoint.h
+./ptx-stats.o: /usr/include/pthread.h /usr/include/sched.h
+./ptx-stats.o: /usr/include/time.h /usr/include/semaphore.h
+./ptx-stats.o: ../../libcuda/abstract_hardware_model.h
+./ptx-stats.o: ../../libcuda/cuda_api_object.h
+./ptx-stats.o: ../../libcuda/abstract_hardware_model.h
+./ptx-stats.o: ../../libcuda/cuda-sim/ptx_ir.h ../../libcuda/gpu-sim.h
+./ptx-stats.o: ../../libcuda/option.h ../../libcuda/shader.h
+./ptx-stats.o: /usr/include/math.h ../../libcuda/stats.h
+./ptx-stats.o: ../../libcuda/addrdec.h ../../libcuda/option.h
+./ptx-stats.o: ../../libcuda/tr1_hash_map.h ../../libcuda/cuobjdump.h
+./ptx-stats.o: ../../libcuda/CUctx.h
+./ptx_ir.o: ptx_ir.h ../../opu/coasm/coasm_define.h /usr/include/assert.h
+./ptx_ir.o: /usr/include/features.h /usr/include/features-time64.h
+./ptx_ir.o: /usr/include/stdc-predef.h ptx_sim.h /usr/include/stdlib.h
+./ptx_ir.o: ../tr1_hash_map.h half.h opcodes.h opcodes.def memory.h
+./ptx_ir.o: /usr/include/stdio.h /usr/include/string.h /usr/include/strings.h
+./ptx_ir.o: ../option.h ptx_parser.h ptx.tab.h ../../libcuda/gpgpu_context.h
+./ptx_ir.o: ../../libcuda/cuda-sim/cuda-sim.h
+./ptx_ir.o: ../../libcuda/cuda-sim/cuda_device_runtime.h
+./ptx_ir.o: ../../libcuda/cuda-sim/ptx-stats.h
+./ptx_ir.o: ../../libcuda/cuda-sim/ptx_loader.h
+./ptx_ir.o: ../../libcuda/cuda-sim/ptx_parser.h
+./ptx_ir.o: ../../libcuda/gpgpusim_entrypoint.h /usr/include/pthread.h
+./ptx_ir.o: /usr/include/sched.h /usr/include/time.h /usr/include/semaphore.h
+./ptx_ir.o: ../../libcuda/abstract_hardware_model.h
+./ptx_ir.o: ../../libcuda/cuda_api_object.h
+./ptx_ir.o: ../../libcuda/abstract_hardware_model.h
+./ptx_ir.o: ../../libcuda/cuda-sim/ptx_ir.h ../../libcuda/gpu-sim.h
+./ptx_ir.o: ../../libcuda/option.h ../../libcuda/shader.h /usr/include/math.h
+./ptx_ir.o: ../../libcuda/stats.h ../../libcuda/addrdec.h
+./ptx_ir.o: ../../libcuda/option.h ../../libcuda/tr1_hash_map.h
+./ptx_ir.o: ../../libcuda/cuobjdump.h ../../libcuda/CUctx.h cuda-sim.h
+./ptx_ir.o: instructions.h instructions_coasm.h
+./ptx_loader.o: ptx_loader.h ptx_ir.h ../../opu/coasm/coasm_define.h
+./ptx_loader.o: /usr/include/assert.h /usr/include/features.h
+./ptx_loader.o: /usr/include/features-time64.h /usr/include/stdc-predef.h
+./ptx_loader.o: ptx_sim.h /usr/include/stdlib.h ../tr1_hash_map.h half.h
+./ptx_loader.o: opcodes.h opcodes.def memory.h /usr/include/stdio.h
+./ptx_loader.o: /usr/include/string.h /usr/include/strings.h ../option.h
+./ptx_loader.o: cuda-sim.h ptx_parser.h /usr/include/unistd.h
+./ptx_loader.o: /usr/include/dirent.h ../../libcuda/gpgpu_context.h
+./ptx_loader.o: ../../libcuda/cuda-sim/cuda-sim.h
+./ptx_loader.o: ../../libcuda/cuda-sim/cuda_device_runtime.h
+./ptx_loader.o: ../../libcuda/cuda-sim/ptx-stats.h
+./ptx_loader.o: ../../libcuda/cuda-sim/ptx_loader.h
+./ptx_loader.o: ../../libcuda/cuda-sim/ptx_parser.h
+./ptx_loader.o: ../../libcuda/gpgpusim_entrypoint.h /usr/include/pthread.h
+./ptx_loader.o: /usr/include/sched.h /usr/include/time.h
+./ptx_loader.o: /usr/include/semaphore.h
+./ptx_loader.o: ../../libcuda/abstract_hardware_model.h
+./ptx_loader.o: ../../libcuda/cuda_api_object.h
+./ptx_loader.o: ../../libcuda/abstract_hardware_model.h
+./ptx_loader.o: ../../libcuda/cuda-sim/ptx_ir.h ../../libcuda/gpu-sim.h
+./ptx_loader.o: ../../libcuda/option.h ../../libcuda/shader.h
+./ptx_loader.o: /usr/include/math.h ../../libcuda/stats.h
+./ptx_loader.o: ../../libcuda/addrdec.h ../../libcuda/option.h
+./ptx_loader.o: ../../libcuda/tr1_hash_map.h ../../libcuda/cuobjdump.h
+./ptx_loader.o: ../../libcuda/CUctx.h
+./ptx_parser.o: ptx_parser.h ../../libcuda/gpgpu_context.h
+./ptx_parser.o: ../../libcuda/cuda-sim/cuda-sim.h
+./ptx_parser.o: ../../libcuda/cuda-sim/cuda_device_runtime.h
+./ptx_parser.o: ../../libcuda/cuda-sim/ptx-stats.h ../option.h
+./ptx_parser.o: /usr/include/stdio.h /usr/include/stdlib.h
+./ptx_parser.o: ../../libcuda/cuda-sim/ptx_loader.h
+./ptx_parser.o: ../../libcuda/cuda-sim/ptx_parser.h ptx_ir.h
+./ptx_parser.o: ../../opu/coasm/coasm_define.h /usr/include/assert.h
+./ptx_parser.o: /usr/include/features.h /usr/include/features-time64.h
+./ptx_parser.o: /usr/include/stdc-predef.h ptx_sim.h ../tr1_hash_map.h half.h
+./ptx_parser.o: opcodes.h opcodes.def memory.h /usr/include/string.h
+./ptx_parser.o: /usr/include/strings.h ../../libcuda/gpgpusim_entrypoint.h
+./ptx_parser.o: /usr/include/pthread.h /usr/include/sched.h
+./ptx_parser.o: /usr/include/time.h /usr/include/semaphore.h
+./ptx_parser.o: ../../libcuda/abstract_hardware_model.h
+./ptx_parser.o: ../../libcuda/cuda_api_object.h
+./ptx_parser.o: ../../libcuda/abstract_hardware_model.h
+./ptx_parser.o: ../../libcuda/cuda-sim/ptx_ir.h ../../libcuda/gpu-sim.h
+./ptx_parser.o: ../../libcuda/option.h ../../libcuda/shader.h
+./ptx_parser.o: /usr/include/math.h ../../libcuda/stats.h
+./ptx_parser.o: ../../libcuda/addrdec.h ../../libcuda/option.h
+./ptx_parser.o: ../../libcuda/tr1_hash_map.h ../../libcuda/cuobjdump.h
+./ptx_parser.o: ../../libcuda/CUctx.h ptx.tab.h ptx_parser_decode.def
+./ptx_sim.o: ptx_sim.h /usr/include/stdlib.h ../tr1_hash_map.h half.h
+./ptx_sim.o: /usr/include/assert.h /usr/include/features.h
+./ptx_sim.o: /usr/include/features-time64.h /usr/include/stdc-predef.h
+./ptx_sim.o: opcodes.h opcodes.def memory.h /usr/include/stdio.h
+./ptx_sim.o: /usr/include/string.h /usr/include/strings.h ptx_ir.h
+./ptx_sim.o: ../../opu/coasm/coasm_define.h ../option.h
+./ptx_sim.o: ../../libcuda/gpgpu_context.h ../../libcuda/cuda-sim/cuda-sim.h
+./ptx_sim.o: ../../libcuda/cuda-sim/cuda_device_runtime.h
+./ptx_sim.o: ../../libcuda/cuda-sim/ptx-stats.h
+./ptx_sim.o: ../../libcuda/cuda-sim/ptx_loader.h
+./ptx_sim.o: ../../libcuda/cuda-sim/ptx_parser.h
+./ptx_sim.o: ../../libcuda/gpgpusim_entrypoint.h /usr/include/pthread.h
+./ptx_sim.o: /usr/include/sched.h /usr/include/time.h
+./ptx_sim.o: /usr/include/semaphore.h ../../libcuda/abstract_hardware_model.h
+./ptx_sim.o: ../../libcuda/cuda_api_object.h
+./ptx_sim.o: ../../libcuda/abstract_hardware_model.h
+./ptx_sim.o: ../../libcuda/cuda-sim/ptx_ir.h ../../libcuda/gpu-sim.h
+./ptx_sim.o: ../../libcuda/option.h ../../libcuda/shader.h
+./ptx_sim.o: /usr/include/math.h ../../libcuda/stats.h
+./ptx_sim.o: ../../libcuda/addrdec.h ../../libcuda/option.h
+./ptx_sim.o: ../../libcuda/tr1_hash_map.h ../../libcuda/cuobjdump.h
+./ptx_sim.o: ../../libcuda/CUctx.h ../gpu-sim.h ../shader.h ptx.tab.h

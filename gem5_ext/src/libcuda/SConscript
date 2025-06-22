@@ -1,0 +1,4 @@
+
+#Import('*')
+#Source('cuda_runtime_api.cc', append={'CXXFLAGS': '-Wno-error=ignored-qualifiers'})
+#Source('cuobjdump.tab.c', append={'CFLAGS': '-Wno-error=ignored-qualifiers'})

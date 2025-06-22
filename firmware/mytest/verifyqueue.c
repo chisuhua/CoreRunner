@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+
 /* Event flags application definitions */
 #define PROD2CONS_NOT_EMPTY   QEVENTFLAG_01    // 生产者缓冲区非空
 #define CONS2PROD_NOT_FULL    QEVENTFLAG_02    // 消费者缓冲区未满
@@ -127,23 +128,78 @@ void IdleTask_Callback( qEvent_t e ) {
     //qTask_EventFlags_Modify(&producerTask, PROD2CONS_NOT_FULL, QEVENTFLAG_SET);  // 设置“未满”
 }
 
-int main(void) {
-    // 初始化操作系统
-    qOS_Setup( NULL, IdleTask_Callback );     
+void putUART1(void *sp, const char c) {
+    putchar(c);
+}
 
-    // 初始化队列和事件标志
-    InitializeQueues();
+typedef struct {
+    volatile int lock; // 0 = unlocked, 1 = locked
+} spinlock_t;
 
-    // 创建任务
-    qOS_Add_EventTask(&consumerTask, Consumer_Callback, qHigh_Priority, "Consumer");
-    qOS_Add_EventTask(&producerTask, Producer_Callback, qLowest_Priority, "Producer");
+#define SPINLOCK_INIT {0}
 
-    // 绑定队列到任务
-    AttachQueuesToTasks();
+void spin_lock(spinlock_t *lock) {
+    int success;
+    asm volatile (
+        "1: lr.w zero, %1\n"          // 尝试保留加载当前值
+        "   bnez zero, 1b\n"          // 如果锁被占用，继续自旋
+        "   li t0, 1\n"               // 设置目标值为 1（上锁）
+        "   sc.w %0, t0, %1\n"        // 尝试原子写入
+        "   bnez %0, 1b\n"            // 如果失败，重试
+        "   fence rw, rw\n"           // 内存屏障，防止乱序
+        : "=&r"(success), "+A"(lock->lock)
+        : 
+        : "t0", "memory"
+    );
+}
 
-    qTask_EventFlags_Modify(&producerTask, PROD2CONS_NOT_FULL, QEVENTFLAG_SET);  // 设置“未满”
+void spin_unlock(spinlock_t *lock) {
+    asm volatile (
+        "   fence rw, rw\n"           // 确保前面的访问完成
+        "   sw zero, %0\n"            // 解锁，将 lock 设为 0
+        : 
+        : "m"(lock->lock)
+        : "memory"
+    );
+}
+
+
+spinlock_t resource_lock = SPINLOCK_INIT;
+
+int main(int hard_id) {
+  	qTrace_Set_OutputFcn(putUART1);
+    if (hard_id == 0) {
+        spin_lock(&resource_lock);
+        qTrace_Decimal( hard_id );
+        spin_unlock(&resource_lock);
+    } else {
+        spin_lock(&resource_lock);
+        qTrace_Decimal( hard_id );
+        spin_unlock(&resource_lock);
+    }
+  	//printf("running hard=%d\n", hard_id);
+/*
+    if (hard_id == 0) {
+    	qTrace_Set_OutputFcn(putUART1);
+        // 初始化操作系统
+        qOS_Setup( NULL, IdleTask_Callback );     
+
+        // 初始化队列和事件标志
+        InitializeQueues();
+
+        // 创建任务
+        qOS_Add_EventTask(&consumerTask, Consumer_Callback, qCore1, "Consumer");
+        qOS_Add_EventTask(&producerTask, Producer_Callback, qLowest_Priority, "Producer");
+
+        // 绑定队列到任务
+        AttachQueuesToTasks();
+
+        qTask_EventFlags_Modify(&producerTask, PROD2CONS_NOT_FULL, QEVENTFLAG_SET);  // 设置“未满”
+    }
+
     // 启动调度器
-    qOS_Run();
+    qOS_Run(hard_id);
+        */
 
     while (1);
 }

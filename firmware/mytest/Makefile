@@ -7,8 +7,9 @@ INC = $(addprefix -I, $(dir $(this_dir)))
 #SRC = $(wildcard helloworld.c)
 #SRC = $(wildcard verifyloop.c)
 #SRC = $(wildcard baremetal.c)
-SRC = $(wildcard verifyqueue.c)
-LINKER = $(wildcard *.ld)
+#SRC = $(wildcard verifyqueue.c)
+SRC = $(wildcard verifyopen.c)
+LINKER_SRC = linker.ld.S
 NDEBUG = 0
-BAREMETAL = 0
+BAREMETAL = 1
 include $(QUARKTS_PATH)/Makefile

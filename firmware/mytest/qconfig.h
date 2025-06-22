@@ -11,6 +11,7 @@
 
     /*==================================================  CONFIGURATION FLAGS  =======================================================*/
     #define Q_PRIORITY_LEVELS           ( 3 )       /**< The number of priorities available to the application tasks*/
+    #define Q_PRIORITY_CORES            ( 2 )       /**< The number of cores for dedicate tasks*/
     #define Q_SETUP_TIME_CANONICAL      ( 1 )       /**< If enabled, kernel assumes the timing Base to 1mS(1KHz). All time specifications for tasks and STimers must be set in mS*/
     #define Q_SETUP_TICK_IN_HERTZ       ( 1 )       /**< If enabled, the timing base will be taken as frequency(Hz) instead of period(S)*/
     #define Q_PRIO_QUEUE_SIZE           ( 10 )      /**< The size of the priority queue (use a 0(zero) value to disable it)*/
@@ -41,6 +42,10 @@
     #define Q_ALLOW_TASK_NAMING         ( 1 )       /**< Tag and locate tasks by using a name string*/
     #define Q_ALLOW_YIELD_TO_TASK       ( 1 )       /**< Allows you to transfer the current CPU usage to another task without having to wait for another cycle of the scheduler*/
     #define Q_TRACE_KERNEL_AND_MODULES  ( 1 )       /**< Experimental*/
+
+    #define THREAD_STACK_SIZE           0x1000
+    #define THREAD_STACK_SHIFT          12      // log2(THREAD_STACK_SIZE)
+    #define MAX_THREADS                 Q_PRIORITY_CORES
  
     /*================================================================================================================================*/  
 #endif

@@ -48,7 +48,7 @@ export PYTORCH_BIN=
 export CUOBJDUMP_SIM_FILE=jj
 export PTX_JIT_PATH=
 export GPGPUSIM_ROOT=$GEM5_ROOT/design/gpgpu/gpgpu-sim/
-export LD_LIBRARY_PATH=$GEM5_ROOT/design/libcuda:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$GEM5_ROOT/src/libcuda:$LD_LIBRARY_PATH
 
 # then update-alternative --config gcc/g++ to 4.7
 # cd benchmarks/rodinia/vectorAdd or

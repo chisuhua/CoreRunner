@@ -151,23 +151,18 @@ void verify_loop_inst(int loop_count, int largebase) {
 }
 
 void main() {
-  // uart_init();
-  // uart_puts("Hello world\n");
+  uart_init();
+  uart_puts("Hello Uart\n");
 
   qTrace_Set_OutputFcn(putUART1);
   verify_loop_inst(1, 10);
   verify_loop_inst(10, 10);
-  verify_loop_inst(100, 10);
   verify_loop_inst(1000, 10);
 
-  verify_loop_inst(1, 100);
-  verify_loop_inst(10, 100);
-  verify_loop_inst(100, 100);
-  verify_loop_inst(1000, 100);
   static qUINT32_t Counter = 0;
   while(1) {
     Counter++;
-    qTrace_Message("hello again\n");
+    qTrace_Message("hello world\n");
     qTrace_Variable(Counter, UnsignedDecimal);
     if (Counter > 2) exit(0);
   }
