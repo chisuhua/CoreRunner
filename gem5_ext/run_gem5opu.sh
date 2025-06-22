@@ -56,7 +56,7 @@ OPTION="${OPTION} $2"
 
 
 #OPTION="${OPTION} --list-sim-objects"
-RUN=$GEM5_ROOT/build/X86_VI_hammer/gem5.$GEM5_VARIANT
+RUN=$GEM5_EXT_ROOT/build/X86_VI_hammer/gem5.$GEM5_VARIANT
 
 
 
@@ -90,7 +90,7 @@ else
     CMD="$DIR/../tests/test-progs/threads/bin/X86/linux/threads"
     CMD="$DIR/../benchmarks/rodinia/vectoradd/gem5_fusion_vectorAdd"
     CMD="$DIR/../design/gpgpu/gpgpu-sim/cuda_samples/0_Simple/vectorAdd/vectorAdd"
-    CMD="$GEM5_ROOT/tests/test-progs/hello/src/hello_cpu"
+    CMD="$GEM5_EXT_ROOT/tests/test-progs/hello/src/hello_cpu"
     #CMD="design/gpgpu/gpgpu-sim/cuda_samples/0_Simple/hello/hello"
     #CMD="/mnt/d/source/github/sim/gem5-gpu/benchmarks/rodinia/backprop/gem5_fusion_backprop -o 16"
     #RUN=./build/X86_VI_hammer_GPU/gem5.debug
@@ -106,12 +106,12 @@ GDB=""
 CMD="$CMD --system-config=opu_libgem5"
 #CMD="$CMD --ppu"
 #CMD="$CMD --cp_firmware=/work_source/github/sim/zephyrproject/zephyr/build_posix_gem5/zephyr/zephyr.exe"
-CMD="$CMD --cp_firmware=$GEM5_ROOT/tests/test-progs/hello/src/hello_opu"
+CMD="$CMD --cp_firmware=$GEM5_EXT_ROOT/tests/test-progs/hello/src/hello_opu"
 
 #CMD="$CMD --list-mem-type"
 CMD="$CMD --mem-type=SimpleMemory"
 
-CONF="$GEM5_ROOT/design/cosim/configs/se_fusion.py"
+CONF="$GEM5_EXT_ROOT/design/cosim/configs/se_fusion.py"
 #CONF="design/gpgpu/configs/se_fusion.py"
 
 echo $RUN $OPTION $CONF $GDB -c $CMD |tee run_gem5gpu.cmd
